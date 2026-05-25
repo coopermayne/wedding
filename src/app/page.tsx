@@ -1,65 +1,138 @@
 import Image from "next/image";
+import Link from "next/link";
 
 export default function Home() {
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div className="max-w-2xl mx-auto px-4 py-6">
+
+      {/* Title */}
+      <div className="text-center mb-2">
+        <p className="text-sm">~*~*~*~*~*~*~*~*~*~*~*~*~*~</p>
+        <h1 className="text-4xl md:text-5xl font-bold my-3">
+          <span style={{ color: "#cc0000" }}>E</span>
+          <span style={{ color: "#ff6600" }}>m</span>
+          <span style={{ color: "#cccc00" }}>i</span>
+          <span style={{ color: "#009900" }}>l</span>
+          <span style={{ color: "#0000cc" }}>y</span>
+          <span className="text-2xl mx-2">&amp;</span>
+          <span style={{ color: "#9900cc" }}>M</span>
+          <span style={{ color: "#cc0000" }}>a</span>
+          <span style={{ color: "#ff6600" }}>x</span>
+        </h1>
+        <p className="comic text-lg" style={{ color: "#cc00cc" }}>
+          are getting married!!!
+        </p>
+        <p className="text-sm">~*~*~*~*~*~*~*~*~*~*~*~*~*~</p>
+      </div>
+
+      <hr className="rainbow-hr my-4" />
+
+      {/* Marquee */}
+      <div className="marquee my-4 text-lg font-bold" style={{ color: "#cc0000" }}>
+        <span>
+          &#9829; October 24, 2026 &bull; Los Angeles, California &bull; 3:30
+          p.m. &#9829; October 24, 2026 &bull; Los Angeles, California &bull;
+          3:30 p.m. &#9829;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+        </span>
+      </div>
+
+      <hr className="rainbow-hr my-4" />
+
+      {/* Photo */}
+      <div className="text-center my-6">
+        <div className="bevel-out inline-block p-2">
+          <div className="relative w-[280px] h-[210px] md:w-[400px] md:h-[300px]">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/images/couple-golden-hour-trees.jpg"
+              alt="Emily and Max"
+              fill
+              className="object-cover"
+              priority
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
         </div>
-      </main>
+        <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
+          ^ that&apos;s us!! ^
+        </p>
+      </div>
+
+      {/* Navigation links */}
+      <div className="text-center my-8">
+        <p className="font-bold text-lg mb-4 underline">
+          CLICK HERE FOR MORE INFO:
+        </p>
+        <div className="flex flex-wrap justify-center gap-3 mb-6">
+          <Link href="/proceedings" className="highlight-red text-sm no-underline" style={{ color: "#ffffff" }}>
+            THE PROCEEDINGS
+          </Link>
+          <Link href="/transportation" className="highlight-blue text-sm no-underline" style={{ color: "#ffffff" }}>
+            TRANSPORTATION
+          </Link>
+          <Link href="/where-to-stay" className="highlight-green text-sm no-underline" style={{ color: "#ffffff" }}>
+            WHERE TO STAY
+          </Link>
+        </div>
+        <div>
+          <Link
+            href="/rsvp"
+            className="highlight-magenta text-base no-underline blink"
+          >
+            &#9829; RSVP HERE &#9829;
+          </Link>
+        </div>
+      </div>
+
+      <hr className="rainbow-hr my-4" />
+
+      {/* Cat photo */}
+      <div className="text-center my-6">
+        <div className="bevel-out inline-block p-2">
+          <div className="relative w-[250px] h-[190px] md:w-[350px] md:h-[260px]">
+            <Image
+              src="/images/couple-with-cat-selfie.jpg"
+              alt="Emily, Max, and their cat"
+              fill
+              className="object-cover"
+            />
+          </div>
+        </div>
+        <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
+          us + our cat (the real star)
+        </p>
+      </div>
+
+      {/* Info blurb */}
+      <div className="bevel-in p-4 my-6 text-center">
+        <p className="text-base mb-2">
+          We both arrived in Los Angeles in the summer of 2023 and met and fell
+          in love here.
+        </p>
+        <p className="text-base">
+          We&apos;re excited for you to enjoy it and celebrate with us.
+        </p>
+      </div>
+
+      {/* Visitor counter */}
+      <div className="text-center my-6">
+        <p className="text-xs mb-1">You are visitor number:</p>
+        <span className="counter">000{Math.floor(Math.random() * 900 + 100)}</span>
+      </div>
+
+      {/* Footer */}
+
+      <div className="text-center text-xs my-4" style={{ color: "#808080" }}>
+        <p>
+          <span className="spin">&#9733;</span> Best viewed in Netscape
+          Navigator 4.0 at 800x600{" "}
+          <span className="spin">&#9733;</span>
+        </p>
+        <p className="mt-1">
+          Made with &#9829; on a Macintosh
+        </p>
+        <p className="mt-1 courier">
+          &copy; 2026 Emily &amp; Max&apos;s Wedding Homepage
+        </p>
+      </div>
     </div>
   );
 }

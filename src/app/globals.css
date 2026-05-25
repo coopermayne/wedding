@@ -1,26 +1,248 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+  --font-heading: var(--font-heading);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+:root {
+  --background: #e8e8e8;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #0000ff;
+  --primary-foreground: #ffffff;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #000000;
+  --muted: #d0d0d0;
+  --muted-foreground: #666666;
+  --accent: #ff00ff;
+  --accent-foreground: #ffffff;
+  --destructive: #ff0000;
+  --border: #808080;
+  --input: #ffffff;
+  --ring: #0000ff;
+  --radius: 0;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Times New Roman", Times, serif;
+    cursor: default;
   }
 }
 
+/* Tiled heart background */
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ece8f0;
+  background-image: url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ctext x='10' y='25' font-size='12' fill='%23c4b8d0' fill-opacity='0.35'%3E%E2%99%A5%3C/text%3E%3Ctext x='50' y='55' font-size='9' fill='%23d0b8c4' fill-opacity='0.3'%3E%E2%99%A5%3C/text%3E%3Ctext x='30' y='70' font-size='14' fill='%23c0b4cc' fill-opacity='0.25'%3E%E2%99%A5%3C/text%3E%3Ctext x='65' y='18' font-size='8' fill='%23ccb8c8' fill-opacity='0.3'%3E%E2%99%A5%3C/text%3E%3C/svg%3E");
+}
+
+/* 90s link styles */
+a {
+  color: #0000ee;
+  text-decoration: underline;
+}
+a:visited {
+  color: #551a8b;
+}
+a:hover {
+  color: #ff0000;
+}
+a:active {
+  color: #ff0000;
+}
+
+/* Beveled box - the classic inset/outset look */
+.bevel-out {
+  border: 3px outset #c0c0c0;
+  background: #d4d0c8;
+}
+.bevel-in {
+  border: 3px inset #c0c0c0;
+  background: #ffffff;
+}
+
+/* Highlighted text backgrounds like in the reference */
+.highlight-red {
+  background: #cc0000;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.highlight-blue {
+  background: #0000cc;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.highlight-green {
+  background: #006600;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.highlight-purple {
+  background: #660099;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.highlight-yellow {
+  background: #ffff00;
+  color: #000000;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+.highlight-magenta {
+  background: #ff00ff;
+  color: #ffffff;
+  padding: 2px 6px;
+  font-weight: bold;
+}
+
+/* Marquee animation */
+@keyframes marquee {
+  0% { transform: translateX(100%); }
+  100% { transform: translateX(-100%); }
+}
+.marquee {
+  overflow: hidden;
+  white-space: nowrap;
+}
+.marquee span {
+  display: inline-block;
+  animation: marquee 12s linear infinite;
+}
+
+/* Rainbow divider */
+.rainbow-hr {
+  height: 6px;
+  border: none;
+  background: linear-gradient(to right, #ff0000, #ff8800, #ffff00, #00ff00, #0000ff, #8800ff, #ff0000);
+}
+
+/* Spinning star animation */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.spin {
+  display: inline-block;
+  animation: spin 3s linear infinite;
+}
+
+/* Blink */
+@keyframes blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+.blink {
+  animation: blink 1s step-start infinite;
+}
+
+/* Comic sans for fun bits */
+.comic {
+  font-family: "Comic Sans MS", "Comic Sans", cursive;
+}
+
+/* Courier for code-y bits */
+.courier {
+  font-family: "Courier New", Courier, monospace;
+}
+
+/* Hit counter style */
+.counter {
+  font-family: "Courier New", Courier, monospace;
+  background: #000000;
+  color: #00ff00;
+  padding: 4px 12px;
+  border: 2px inset #808080;
+  letter-spacing: 2px;
+  font-size: 14px;
+}
+
+
+/* Guestbook / form styling */
+input[type="text"],
+input[type="email"],
+select,
+textarea {
+  border: 2px inset #c0c0c0 !important;
+  background: #ffffff !important;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 16px;
+  border-radius: 0 !important;
+  padding: 4px 8px;
+}
+
+/* 90s button */
+.btn-90s {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14px;
+  font-weight: bold;
+  background: #c0c0c0;
+  border: 3px outset #c0c0c0;
+  padding: 6px 20px;
+  cursor: pointer;
+  color: #000000;
+}
+.btn-90s:active {
+  border-style: inset;
+}
+
+/* Table borders like old HTML */
+.retro-table {
+  border-collapse: collapse;
+}
+.retro-table td,
+.retro-table th {
+  border: 1px solid #000000;
+  padding: 8px 12px;
+  vertical-align: top;
+}
+
+/* Webring style */
+.webring {
+  border: 2px solid #000000;
+  background: #ffffcc;
+  padding: 8px;
+  text-align: center;
+  font-size: 12px;
 }
