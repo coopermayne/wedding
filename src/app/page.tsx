@@ -62,20 +62,20 @@ export default function Home() {
           CLICK HERE FOR MORE INFO:
         </p>
         <div className="flex flex-wrap justify-center gap-3 mb-6">
-          <Link href="/proceedings" className="highlight-red text-sm no-underline" style={{ color: "#ffffff" }}>
+          <Link href="/proceedings" className="highlight-red text-sm no-underline link-glow">
             THE PROCEEDINGS
           </Link>
-          <Link href="/transportation" className="highlight-blue text-sm no-underline" style={{ color: "#ffffff" }}>
+          <Link href="/transportation" className="highlight-blue text-sm no-underline link-glow">
             TRANSPORTATION
           </Link>
-          <Link href="/where-to-stay" className="highlight-green text-sm no-underline" style={{ color: "#ffffff" }}>
+          <Link href="/where-to-stay" className="highlight-green text-sm no-underline link-glow">
             WHERE TO STAY
           </Link>
         </div>
         <div>
           <Link
             href="/rsvp"
-            className="highlight-magenta text-base no-underline blink"
+            className="highlight-magenta text-base no-underline blink link-glow"
           >
             &#9829; RSVP HERE &#9829;
           </Link>

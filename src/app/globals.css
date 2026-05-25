@@ -238,6 +238,11 @@ textarea {
   vertical-align: top;
 }
 
+/* White accent on links over colored backgrounds */
+.link-glow {
+  text-shadow: 1px 1px 0 rgba(255,255,255,0.8);
+}
+
 /* Webring style */
 .webring {
   border: 2px solid #000000;
