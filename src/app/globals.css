@@ -139,8 +139,8 @@ a:active {
 
 /* Marquee animation */
 @keyframes marquee {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
 .marquee {
   overflow: hidden;
@@ -148,7 +148,7 @@ a:active {
 }
 .marquee span {
   display: inline-block;
-  animation: marquee 12s linear infinite;
+  animation: marquee 6s linear infinite;
 }
 
 /* Rainbow divider */

@@ -30,9 +30,8 @@ export default function Home() {
       {/* Marquee */}
       <div className="marquee my-4 text-lg font-bold" style={{ color: "#cc0000" }}>
         <span>
-          &#9829; October 24, 2026 &bull; Los Angeles, California &bull; 3:30
-          p.m. &#9829; October 24, 2026 &bull; Los Angeles, California &bull;
-          3:30 p.m. &#9829;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+          &#9829; October 24, 2026 &bull; Los Angeles, California &bull; 3:30 p.m. &nbsp;&nbsp;&nbsp;
+          &#9829; October 24, 2026 &bull; Los Angeles, California &bull; 3:30 p.m. &nbsp;&nbsp;&nbsp;
         </span>
       </div>
 
