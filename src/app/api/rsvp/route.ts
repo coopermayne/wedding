@@ -1,34 +1,28 @@
 import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+import { google } from "googleapis";
 
-const DATA_DIR = process.env.DATA_DIR || path.join(/*turbopackIgnore: true*/ process.cwd(), "data");
-const DATA_FILE = path.join(DATA_DIR, "rsvps.json");
+function getAuth() {
+  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+  const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
+  const sheetId = process.env.GOOGLE_SPREADSHEET_ID;
 
-function ensureDataFile() {
-  if (!fs.existsSync(DATA_DIR)) {
-    fs.mkdirSync(DATA_DIR, { recursive: true });
+  if (!email || !key || !sheetId) {
+    throw new Error("Missing Google Sheets environment variables");
   }
-  if (!fs.existsSync(DATA_FILE)) {
-    fs.writeFileSync(DATA_FILE, "[]", "utf-8");
-  }
-}
 
-function readRsvps() {
-  ensureDataFile();
-  const raw = fs.readFileSync(DATA_FILE, "utf-8");
-  return JSON.parse(raw);
-}
+  const auth = new google.auth.JWT({
+    email,
+    key,
+    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
+  });
 
-function writeRsvps(rsvps: unknown[]) {
-  ensureDataFile();
-  fs.writeFileSync(DATA_FILE, JSON.stringify(rsvps, null, 2), "utf-8");
+  const sheets = google.sheets({ version: "v4", auth });
+  return { sheets, sheetId };
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
     const { name, email, attending, guests, dietary, song } = body;
 
     if (!name || !email || !attending) {
@@ -38,35 +32,43 @@ export async function POST(request: Request) {
       );
     }
 
-    const rsvp = {
-      id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+    const { sheets, sheetId } = getAuth();
+
+    const row = [
       name,
       email,
       attending,
-      guests: guests || 1,
-      dietary: dietary || "",
-      song: song || "",
-      submittedAt: new Date().toISOString(),
-    };
+      guests || "1",
+      dietary || "",
+      song || "",
+      new Date().toISOString(),
+    ];
 
-    const rsvps = readRsvps();
-    rsvps.push(rsvp);
-    writeRsvps(rsvps);
+    const response = await sheets.spreadsheets.values.append({
+      spreadsheetId: sheetId,
+      range: "Sheet1!A:G",
+      valueInputOption: "RAW",
+      requestBody: { values: [row] },
+    });
 
-    return NextResponse.json({ success: true, id: rsvp.id });
-  } catch {
+    if (response.status !== 200) {
+      throw new Error("Google Sheets returned status " + response.status);
+    }
+
+    const updatedRows = response.data.updates?.updatedRows;
+    if (!updatedRows || updatedRows < 1) {
+      throw new Error("Row was not written to the spreadsheet");
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("RSVP save error:", err);
     return NextResponse.json(
-      { error: "Something went wrong saving your RSVP. Please try again." },
+      {
+        error:
+          "We couldn't save your RSVP. Please try again, or email us directly.",
+      },
       { status: 500 }
     );
-  }
-}
-
-export async function GET() {
-  try {
-    const rsvps = readRsvps();
-    return NextResponse.json(rsvps);
-  } catch {
-    return NextResponse.json({ error: "Could not read RSVPs." }, { status: 500 });
   }
 }
