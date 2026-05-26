@@ -4,9 +4,10 @@ import Link from "next/link";
 import { useState } from "react";
 
 export default function RSVP() {
-  const [submitted, setSubmitted] = useState(false);
+  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [errorMsg, setErrorMsg] = useState("");
 
-  if (submitted) {
+  if (status === "success") {
     return (
       <div className="max-w-2xl mx-auto px-4 py-6">
         <div className="text-center my-16">
@@ -38,7 +39,6 @@ export default function RSVP() {
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
-
       <Link href="/" className="text-sm">
         &lt;&lt; Back to Home
       </Link>
@@ -57,10 +57,48 @@ export default function RSVP() {
 
       <hr className="rainbow-hr my-4" />
 
+      {status === "error" && (
+        <div
+          className="p-3 mb-4 text-center font-bold"
+          style={{ background: "#ffcccc", border: "2px solid #cc0000", color: "#cc0000" }}
+        >
+          {errorMsg || "Something went wrong. Please try again!"}
+        </div>
+      )}
+
       <form
-        onSubmit={(e) => {
+        onSubmit={async (e) => {
           e.preventDefault();
-          setSubmitted(true);
+          setStatus("submitting");
+          setErrorMsg("");
+
+          const form = e.currentTarget;
+          const formData = new FormData(form);
+
+          try {
+            const res = await fetch("/api/rsvp", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                name: formData.get("name"),
+                email: formData.get("email"),
+                attending: formData.get("attending"),
+                guests: formData.get("guests"),
+                dietary: formData.get("dietary"),
+                song: formData.get("song"),
+              }),
+            });
+
+            if (!res.ok) {
+              const data = await res.json();
+              throw new Error(data.error || "Failed to save RSVP");
+            }
+
+            setStatus("success");
+          } catch (err) {
+            setErrorMsg(err instanceof Error ? err.message : "Failed to save. Please try again.");
+            setStatus("error");
+          }
         }}
         className="bevel-in p-4 md:p-6"
       >
@@ -71,7 +109,7 @@ export default function RSVP() {
                 Your Name:
               </td>
               <td>
-                <input type="text" required className="w-full" />
+                <input type="text" name="name" required className="w-full" />
               </td>
             </tr>
             <tr>
@@ -79,7 +117,7 @@ export default function RSVP() {
                 Email:
               </td>
               <td>
-                <input type="email" required className="w-full" />
+                <input type="email" name="email" required className="w-full" />
               </td>
             </tr>
             <tr>
@@ -113,7 +151,7 @@ export default function RSVP() {
                 # Guests:
               </td>
               <td>
-                <select className="w-32">
+                <select name="guests" className="w-32">
                   <option value="1">Just me</option>
                   <option value="2">2</option>
                   <option value="3">3</option>
@@ -127,6 +165,7 @@ export default function RSVP() {
               </td>
               <td>
                 <textarea
+                  name="dietary"
                   rows={2}
                   className="w-full"
                   placeholder="Allergies, vegetarian, etc."
@@ -140,6 +179,7 @@ export default function RSVP() {
               <td>
                 <input
                   type="text"
+                  name="song"
                   className="w-full"
                   placeholder="What should we play at the afterparty?"
                 />
@@ -149,12 +189,16 @@ export default function RSVP() {
         </table>
 
         <div className="text-center mt-6">
-          <button type="submit" className="btn-90s text-base">
-            [ Submit RSVP ]
+          <button
+            type="submit"
+            disabled={status === "submitting"}
+            className="btn-90s text-base"
+            style={status === "submitting" ? { opacity: 0.6 } : {}}
+          >
+            {status === "submitting" ? "[ Submitting... ]" : "[ Submit RSVP ]"}
           </button>
         </div>
       </form>
-
 
       <div className="text-center my-4">
         <Link href="/where-to-stay" className="text-sm">
