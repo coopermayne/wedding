@@ -29,15 +29,33 @@ function statusLabel(p: Party): { text: string; color: string } {
   return { text: "No response", color: "#999999" };
 }
 
+type Filter = "all" | "pending" | "attending" | "declined";
+
+function matchesFilter(attending: "yes" | "no" | null, filter: Filter): boolean {
+  if (filter === "pending") return attending === null;
+  if (filter === "attending") return attending === "yes";
+  if (filter === "declined") return attending === "no";
+  return true;
+}
+
 export default async function AdminPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ key: string }>;
+  searchParams: Promise<{ filter?: string }>;
 }) {
   const { key } = await params;
   if (!process.env.ADMIN_SECRET || key !== process.env.ADMIN_SECRET) {
     notFound();
   }
+
+  const { filter: filterParam } = await searchParams;
+  const filter: Filter = (["pending", "attending", "declined"] as const).includes(
+    filterParam as "pending" | "attending" | "declined"
+  )
+    ? (filterParam as Filter)
+    : "all";
 
   const stats = getStats();
   const parties = listParties();
@@ -45,7 +63,9 @@ export default async function AdminPage({
   const linkFor = (code: string) =>
     siteUrl ? `${siteUrl}/rsvp/${code}` : `/rsvp/${code}`;
 
-  const byName = [...parties].sort((a, b) => a.name.localeCompare(b.name));
+  const byName = [...parties]
+    .filter((p) => matchesFilter(p.attending, filter))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const recent = [...parties]
     .filter((p) => p.respondedAt)
     .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
@@ -88,11 +108,39 @@ export default async function AdminPage({
       </div>
 
       <div className="text-center mb-6">
-        <a href={`/admin/${key}/export`} className="btn-90s text-sm" download>
-          [ Export CSV ]
-        </a>
-        <p className="comic text-xs mt-1" style={{ color: "#666666" }}>
-          Includes each invite&apos;s personalized link for your email mailmerge.
+        <p className="font-bold text-sm mb-2" style={{ color: "#cc00cc" }}>
+          Export for mailmerge
+        </p>
+        <div className="flex flex-wrap gap-2 justify-center">
+          <a href={`/admin/${key}/export`} className="btn-90s text-sm" download>
+            [ Everyone ]
+          </a>
+          <a
+            href={`/admin/${key}/export?status=pending`}
+            className="btn-90s text-sm"
+            download
+          >
+            [ Not responded ({stats.pending}) ]
+          </a>
+          <a
+            href={`/admin/${key}/export?status=attending`}
+            className="btn-90s text-sm"
+            download
+          >
+            [ Attending ({stats.accepted}) ]
+          </a>
+          <a
+            href={`/admin/${key}/export?status=declined`}
+            className="btn-90s text-sm"
+            download
+          >
+            [ Declined ({stats.declined}) ]
+          </a>
+        </div>
+        <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
+          Each CSV has every invite&apos;s personalized link. Use{" "}
+          <b>Not responded</b> for reminder emails and <b>Attending</b> for
+          confirmations.
         </p>
       </div>
 
@@ -175,12 +223,46 @@ export default async function AdminPage({
       )}
 
       {/* Guest table */}
-      <h2 className="font-bold text-lg mb-2">All invites ({parties.length})</h2>
+      <h2 className="font-bold text-lg mb-2">Guest list</h2>
       {parties.length === 0 ? (
         <p className="comic text-sm" style={{ color: "#666666" }}>
           No invites yet &mdash; add some above.
         </p>
       ) : (
+        <>
+          <div className="text-sm mb-2">
+            Show:{" "}
+            {(
+              [
+                { f: "all", label: `All (${parties.length})` },
+                { f: "pending", label: `Not responded (${stats.pending})` },
+                { f: "attending", label: `Attending (${stats.accepted})` },
+                { f: "declined", label: `Declined (${stats.declined})` },
+              ] as const
+            ).map((opt, i) => (
+              <span key={opt.f}>
+                {i > 0 && " · "}
+                {filter === opt.f ? (
+                  <b>{opt.label}</b>
+                ) : (
+                  <a
+                    href={
+                      opt.f === "all"
+                        ? `/admin/${key}`
+                        : `/admin/${key}?filter=${opt.f}`
+                    }
+                  >
+                    {opt.label}
+                  </a>
+                )}
+              </span>
+            ))}
+          </div>
+          {byName.length === 0 ? (
+            <p className="comic text-sm" style={{ color: "#666666" }}>
+              No invites in this view.
+            </p>
+          ) : (
         <table className="retro-table w-full text-sm">
           <thead>
             <tr style={{ background: "#d4d0c8" }}>
@@ -260,6 +342,8 @@ export default async function AdminPage({
             })}
           </tbody>
         </table>
+          )}
+        </>
       )}
     </div>
   );
