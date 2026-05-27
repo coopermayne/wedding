@@ -97,7 +97,12 @@ export default function RSVPPage() {
     const payloadGuests =
       attending === "yes"
         ? guests
-            .map((g) => ({ name: g.name.trim(), dietary: g.dietary.trim() }))
+            // Guest 1 is the invitee — their name is always the invite name,
+            // never something they typed.
+            .map((g, idx) => ({
+              name: idx === 0 ? party.name : g.name.trim(),
+              dietary: g.dietary.trim(),
+            }))
             .filter((g) => g.name)
         : [];
 
@@ -300,60 +305,71 @@ export default function RSVPPage() {
             </p>
             <p className="comic text-center text-xs mb-4" style={{ color: "#666666" }}>
               {party.maxGuests > 1
-                ? `Add everyone in your party (up to ${party.maxGuests}), including yourself.`
-                : "Confirm your details below."}
+                ? `You can bring up to ${party.maxGuests - 1} other ${
+                    party.maxGuests - 1 === 1 ? "guest" : "guests"
+                  }.`
+                : "Just add any dietary needs below."}
             </p>
 
-            {guests.map((g, i) => (
-              <div key={i} className="bevel-in p-3 mb-3">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-sm">
-                    {i === 0 ? "Guest 1 (you)" : `Guest ${i + 1}`}
-                  </span>
-                  {guests.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeGuest(i)}
-                      style={{
-                        background: "none",
-                        border: "none",
-                        color: "#cc0000",
-                        textDecoration: "underline",
-                        cursor: "pointer",
-                        font: "inherit",
-                        fontSize: "0.8rem",
-                        padding: 0,
-                      }}
-                    >
-                      [ remove ]
-                    </button>
+            {guests.map((g, i) => {
+              const isPrimary = i === 0;
+              return (
+                <div key={i} className="bevel-in p-3 mb-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="font-bold text-sm">
+                      {isPrimary ? party.name : `Guest ${i + 1}`}
+                    </span>
+                    {!isPrimary && (
+                      <button
+                        type="button"
+                        onClick={() => removeGuest(i)}
+                        style={{
+                          background: "none",
+                          border: "none",
+                          color: "#cc0000",
+                          textDecoration: "underline",
+                          cursor: "pointer",
+                          font: "inherit",
+                          fontSize: "0.8rem",
+                          padding: 0,
+                        }}
+                      >
+                        [ remove ]
+                      </button>
+                    )}
+                  </div>
+                  {!isPrimary && (
+                    <>
+                      <label className="block font-bold text-xs mb-1">Name</label>
+                      <input
+                        type="text"
+                        value={g.name}
+                        onChange={(e) => updateGuest(i, "name", e.target.value)}
+                        placeholder="Full name"
+                        className="w-full mb-2"
+                      />
+                    </>
                   )}
+                  <label className="block font-bold text-xs mb-1">
+                    {isPrimary
+                      ? "Your dietary restrictions / allergies"
+                      : "Dietary restrictions / allergies"}
+                  </label>
+                  <input
+                    type="text"
+                    value={g.dietary}
+                    onChange={(e) => updateGuest(i, "dietary", e.target.value)}
+                    placeholder="e.g. vegetarian, gluten free, none"
+                    className="w-full"
+                  />
                 </div>
-                <label className="block font-bold text-xs mb-1">Name</label>
-                <input
-                  type="text"
-                  value={g.name}
-                  onChange={(e) => updateGuest(i, "name", e.target.value)}
-                  placeholder="Full name"
-                  className="w-full mb-2"
-                />
-                <label className="block font-bold text-xs mb-1">
-                  Dietary restrictions / allergies
-                </label>
-                <input
-                  type="text"
-                  value={g.dietary}
-                  onChange={(e) => updateGuest(i, "dietary", e.target.value)}
-                  placeholder="e.g. vegetarian, gluten free, none"
-                  className="w-full"
-                />
-              </div>
-            ))}
+              );
+            })}
 
             {guests.length < party.maxGuests && (
               <div className="text-center mb-2">
                 <button type="button" onClick={addGuest} className="btn-90s text-sm">
-                  + Add guest
+                  + Add another guest
                 </button>
               </div>
             )}
