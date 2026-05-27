@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getStats, listParties, type Party } from "@/lib/db";
-import {
-  bulkAddAction,
-  createPartyAction,
-  deletePartyAction,
-  updatePartyAction,
-} from "./actions";
+import { bulkAddAction, createPartyAction, updatePartyAction } from "./actions";
+import { DeleteButton } from "./delete-button";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
@@ -22,6 +18,8 @@ function fmtDate(iso: string | null): string {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
+    timeZone: "America/Los_Angeles",
+    timeZoneName: "short",
   });
 }
 
@@ -255,25 +253,7 @@ export default async function AdminPage({
                         </button>
                       </form>
                     </details>
-                    <form action={deletePartyAction} className="mt-1">
-                      <input type="hidden" name="key" value={key} />
-                      <input type="hidden" name="id" value={p.id} />
-                      <button
-                        type="submit"
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: "#cc0000",
-                          textDecoration: "underline",
-                          cursor: "pointer",
-                          font: "inherit",
-                          fontSize: "0.75rem",
-                          padding: 0,
-                        }}
-                      >
-                        delete
-                      </button>
-                    </form>
+                    <DeleteButton adminKey={key} id={p.id} name={p.name} />
                   </td>
                 </tr>
               );
