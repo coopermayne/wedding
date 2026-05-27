@@ -38,8 +38,9 @@ export async function GET(
   const status = new URL(request.url).searchParams.get("status") || "all";
 
   const siteUrl = (process.env.SITE_URL || "").replace(/\/$/, "");
+  // Invite link lands on the personalized home page (which routes to the form).
   const linkFor = (code: string) =>
-    siteUrl ? `${siteUrl}/rsvp/${code}` : `/rsvp/${code}`;
+    siteUrl ? `${siteUrl}/?i=${code}` : `/?i=${code}`;
 
   const header = [
     "Name",

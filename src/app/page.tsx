@@ -1,7 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getPartyByCode } from "@/lib/db";
 
-export default function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ i?: string }>;
+}) {
+  // Personalized invite links land here as /?i=<code>. If the code resolves to
+  // an invite, we greet them by name and point the RSVP button at their form.
+  const { i } = await searchParams;
+  const party = i ? getPartyByCode(i) : null;
+  const rsvpHref = party ? `/rsvp/${party.code}` : "/rsvp";
+
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
 
@@ -24,6 +35,35 @@ export default function Home() {
         </p>
         <p className="text-sm">~*~*~*~*~*~*~*~*~*~*~*~*~*~</p>
       </div>
+
+      {/* Personalized welcome (shown when arriving via an invite link) */}
+      {party && (
+        <div
+          className="bevel-in p-4 my-4 text-center"
+          style={{ background: "#fffbe6" }}
+        >
+          <p className="comic text-lg" style={{ color: "#cc00cc" }}>
+            &#9829; Welcome, {party.name}! &#9829;
+          </p>
+          <p className="text-sm mt-1">
+            {party.attending !== null
+              ? "Thanks for your RSVP! You can view or update it anytime:"
+              : "We're so happy to invite you! Please let us know if you can make it:"}
+          </p>
+          <p className="mt-3">
+            <Link
+              href={rsvpHref}
+              className="highlight-magenta text-base no-underline blink link-glow"
+            >
+              &#9829;{" "}
+              {party.attending !== null
+                ? "VIEW / UPDATE YOUR RSVP"
+                : "RSVP HERE"}{" "}
+              &#9829;
+            </Link>
+          </p>
+        </div>
+      )}
 
       <hr className="rainbow-hr my-4" />
 
@@ -73,7 +113,7 @@ export default function Home() {
         </div>
         <div>
           <Link
-            href="/rsvp"
+            href={rsvpHref}
             className="highlight-magenta text-base no-underline blink link-glow"
           >
             &#9829; RSVP HERE &#9829;

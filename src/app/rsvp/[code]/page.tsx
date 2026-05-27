@@ -25,11 +25,15 @@ export default function RSVPPage() {
   const [loading, setLoading] = useState(true);
   const [invalid, setInvalid] = useState(false);
 
+  // "summary" = show what they submitted (with an Update button);
+  // "form" = the editable RSVP form.
+  const [mode, setMode] = useState<"summary" | "form">("form");
+
   const [attending, setAttending] = useState<"yes" | "no" | "">("");
   const [guests, setGuests] = useState<GuestRow[]>([{ name: "", dietary: "" }]);
   const [song, setSong] = useState("");
 
-  const [status, setStatus] = useState<"idle" | "submitting" | "success" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "submitting" | "error">("idle");
   const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
@@ -47,6 +51,9 @@ export default function RSVPPage() {
             ? data.guests
             : [{ name: "", dietary: "" }]
         );
+        // If they've already responded, land on the summary so a refresh or a
+        // second visit shows what they submitted rather than a blank form.
+        setMode(data.responded ? "summary" : "form");
         setLoading(false);
       })
       .catch(() => {
@@ -55,16 +62,22 @@ export default function RSVPPage() {
       });
   }, [code]);
 
+  function startEditing() {
+    if (!party) return;
+    setAttending(party.attending ?? "");
+    setSong(party.song || "");
+    setGuests(party.guests && party.guests.length ? party.guests : [{ name: "", dietary: "" }]);
+    setStatus("idle");
+    setErrorMsg("");
+    setMode("form");
+  }
+
   function updateGuest(i: number, field: keyof GuestRow, value: string) {
-    setGuests((prev) =>
-      prev.map((g, idx) => (idx === i ? { ...g, [field]: value } : g))
-    );
+    setGuests((prev) => prev.map((g, idx) => (idx === i ? { ...g, [field]: value } : g)));
   }
   function addGuest() {
     setGuests((prev) =>
-      party && prev.length < party.maxGuests
-        ? [...prev, { name: "", dietary: "" }]
-        : prev
+      party && prev.length < party.maxGuests ? [...prev, { name: "", dietary: "" }] : prev
     );
   }
   function removeGuest(i: number) {
@@ -101,12 +114,7 @@ export default function RSVPPage() {
       const res = await fetch("/api/rsvp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: party.code,
-          attending,
-          song,
-          guests: payloadGuests,
-        }),
+        body: JSON.stringify({ code: party.code, attending, song, guests: payloadGuests }),
       });
 
       if (!res.ok) {
@@ -114,11 +122,13 @@ export default function RSVPPage() {
         throw new Error(data.error || "Failed to save RSVP");
       }
 
-      setStatus("success");
+      // Update local state so the summary reflects what we just saved.
+      setParty({ ...party, attending, song, guests: payloadGuests, responded: true });
+      setStatus("idle");
+      setMode("summary");
+      window.scrollTo({ top: 0 });
     } catch (err) {
-      setErrorMsg(
-        err instanceof Error ? err.message : "Failed to save. Please try again."
-      );
+      setErrorMsg(err instanceof Error ? err.message : "Failed to save. Please try again.");
       setStatus("error");
     }
   }
@@ -133,7 +143,7 @@ export default function RSVPPage() {
     );
   }
 
-  if (invalid) {
+  if (invalid || !party) {
     return (
       <div className="max-w-lg mx-auto px-4 py-6 text-center my-16">
         <h1 className="text-3xl font-bold mb-4" style={{ color: "#cc0000" }}>
@@ -149,60 +159,80 @@ export default function RSVPPage() {
     );
   }
 
-  if (status === "success") {
-    const declined = attending === "no";
+  // ---- Summary view (already responded) ----
+  if (mode === "summary") {
+    const declined = party.attending === "no";
     return (
-      <div className="max-w-2xl mx-auto px-4 py-6">
-        <div className="text-center my-16">
-          <p className="text-4xl mb-4">
-            {declined ? "\u{1F494}" : "\u{1F389}\u{1F389}\u{1F389}"}
-          </p>
+      <div className="max-w-lg mx-auto px-4 py-6">
+        <Link href="/" className="text-sm">
+          &lt;&lt; Back to Home
+        </Link>
+
+        <div className="text-center my-6">
+          <p className="text-4xl mb-2">{declined ? "\u{1F494}" : "\u{1F389}"}</p>
           <h1
-            className="text-3xl md:text-4xl font-bold mb-4"
+            className="text-3xl md:text-4xl font-bold"
             style={{ color: declined ? "#666666" : "#cc00cc" }}
           >
-            {declined ? "WE'LL MISS YOU!" : "SEE YOU THERE!!!"}
+            {declined ? "WE'LL MISS YOU!" : "YOU'RE ALL SET!"}
           </h1>
-          <p className="comic text-lg mb-6" style={{ color: "#666666" }}>
+          <p className="comic text-base mt-2" style={{ color: "#666666" }}>
             {declined
-              ? "Thanks for letting us know. We'll be thinking of you!"
-              : `Thanks ${party!.name}! We can't wait to celebrate with you.`}
+              ? `Thanks for letting us know, ${party.name}.`
+              : `Thanks, ${party.name}! Here's what we have for you:`}
           </p>
-          {!declined && (
-            <div className="marquee comic" style={{ color: "#009900" }}>
-              <span>
-                &#9829; THANK YOU &#9829; THANK YOU &#9829; THANK YOU &#9829;
-                THANK YOU &#9829;&nbsp;&nbsp;&nbsp;&nbsp;
-              </span>
-            </div>
-          )}
-          <p className="comic text-sm mt-6" style={{ color: "#666666" }}>
-            Changed your mind? You can{" "}
-            <button
-              type="button"
-              onClick={() => setStatus("idle")}
-              style={{
-                background: "none",
-                border: "none",
-                color: "#0000ee",
-                textDecoration: "underline",
-                cursor: "pointer",
-                font: "inherit",
-                padding: 0,
-              }}
-            >
-              update your RSVP
-            </button>{" "}
-            any time.
-          </p>
-          <p className="mt-4">
-            <Link href="/">&lt;&lt; Back to Home &gt;&gt;</Link>
-          </p>
+        </div>
+
+        <hr className="rainbow-hr my-4" />
+
+        {!declined && (
+          <div className="bevel-in p-4">
+            <p className="font-bold text-sm mb-2" style={{ color: "#cc00cc" }}>
+              &#9829; Attending ({party.guests.length})
+            </p>
+            <ul className="text-sm mb-3">
+              {party.guests.map((g, i) => (
+                <li key={i} className="mb-1">
+                  &#9829; {g.name}
+                  {g.dietary && (
+                    <span style={{ color: "#cc0000" }}> &mdash; {g.dietary}</span>
+                  )}
+                </li>
+              ))}
+            </ul>
+            {party.song && (
+              <p className="text-sm">
+                <span className="font-bold">Song request:</span> {party.song}
+              </p>
+            )}
+          </div>
+        )}
+
+        <div className="text-center mt-6">
+          <button onClick={startEditing} className="btn-90s text-base">
+            [ Update my RSVP ]
+          </button>
+        </div>
+
+        {!declined && (
+          <div className="marquee comic mt-6" style={{ color: "#009900" }}>
+            <span>
+              &#9829; THANK YOU &#9829; THANK YOU &#9829; THANK YOU &#9829; THANK
+              YOU &#9829;&nbsp;&nbsp;&nbsp;&nbsp;
+            </span>
+          </div>
+        )}
+
+        <div className="text-center my-4">
+          <Link href="/" className="text-sm">
+            Home
+          </Link>
         </div>
       </div>
     );
   }
 
+  // ---- Form view ----
   return (
     <div className="max-w-lg mx-auto px-4 py-6">
       <Link href="/" className="text-sm">
@@ -210,19 +240,15 @@ export default function RSVPPage() {
       </Link>
 
       <div className="text-center my-6">
-        <h1
-          className="text-3xl md:text-4xl font-bold"
-          style={{ color: "#cc00cc" }}
-        >
+        <h1 className="text-3xl md:text-4xl font-bold" style={{ color: "#cc00cc" }}>
           ~*~ RSVP ~*~
         </h1>
         <p className="comic text-base mt-2" style={{ color: "#666666" }}>
-          Hello, {party!.name}!
+          Hello, {party.name}!
         </p>
-        {party!.responded && (
+        {party.responded && (
           <p className="comic text-xs mt-1" style={{ color: "#009900" }}>
-            You&apos;ve already RSVP&apos;d &mdash; feel free to update your
-            answers below.
+            Updating your previous RSVP.
           </p>
         )}
       </div>
@@ -232,11 +258,7 @@ export default function RSVPPage() {
       {status === "error" && (
         <div
           className="p-3 mb-4 text-center font-bold"
-          style={{
-            background: "#ffcccc",
-            border: "2px solid #cc0000",
-            color: "#cc0000",
-          }}
+          style={{ background: "#ffcccc", border: "2px solid #cc0000", color: "#cc0000" }}
         >
           {errorMsg || "Something went wrong. Please try again!"}
         </div>
@@ -268,25 +290,21 @@ export default function RSVPPage() {
         {attending === "yes" && (
           <>
             <hr className="rainbow-hr my-4" />
-            <p
-              className="text-center font-bold text-sm mb-1"
-              style={{ color: "#cc00cc" }}
-            >
+            <p className="text-center font-bold text-sm mb-1" style={{ color: "#cc00cc" }}>
               &#9829; WHO&apos;S COMING? &#9829;
             </p>
-            <p
-              className="comic text-center text-xs mb-4"
-              style={{ color: "#666666" }}
-            >
-              {party!.maxGuests > 1
-                ? `Add everyone in your party (up to ${party!.maxGuests}).`
-                : "Confirm your name below."}
+            <p className="comic text-center text-xs mb-4" style={{ color: "#666666" }}>
+              {party.maxGuests > 1
+                ? `Add everyone in your party (up to ${party.maxGuests}), including yourself.`
+                : "Confirm your details below."}
             </p>
 
             {guests.map((g, i) => (
               <div key={i} className="bevel-in p-3 mb-3">
                 <div className="flex justify-between items-center mb-2">
-                  <span className="font-bold text-sm">Guest {i + 1}</span>
+                  <span className="font-bold text-sm">
+                    {i === 0 ? "Guest 1 (you)" : `Guest ${i + 1}`}
+                  </span>
                   {guests.length > 1 && (
                     <button
                       type="button"
@@ -306,6 +324,7 @@ export default function RSVPPage() {
                     </button>
                   )}
                 </div>
+                <label className="block font-bold text-xs mb-1">Name</label>
                 <input
                   type="text"
                   value={g.name}
@@ -313,17 +332,20 @@ export default function RSVPPage() {
                   placeholder="Full name"
                   className="w-full mb-2"
                 />
+                <label className="block font-bold text-xs mb-1">
+                  Dietary restrictions / allergies
+                </label>
                 <input
                   type="text"
                   value={g.dietary}
                   onChange={(e) => updateGuest(i, "dietary", e.target.value)}
-                  placeholder="Dietary restrictions (optional)"
+                  placeholder="e.g. vegetarian, gluten free, none"
                   className="w-full"
                 />
               </div>
             ))}
 
-            {guests.length < party!.maxGuests && (
+            {guests.length < party.maxGuests && (
               <div className="text-center mb-2">
                 <button type="button" onClick={addGuest} className="btn-90s text-sm">
                   + Add guest
@@ -332,7 +354,7 @@ export default function RSVPPage() {
             )}
 
             <hr className="rainbow-hr my-4" />
-            <p className="font-bold text-sm mb-2">Song Request:</p>
+            <label className="block font-bold text-sm mb-2">Song Request:</label>
             <input
               type="text"
               value={song}
