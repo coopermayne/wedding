@@ -243,14 +243,6 @@ export default function RSVPPage() {
         <h1 className="text-3xl md:text-4xl font-bold" style={{ color: "#cc00cc" }}>
           ~*~ RSVP ~*~
         </h1>
-        <p className="comic text-base mt-2" style={{ color: "#666666" }}>
-          Hello, {party.name}!
-        </p>
-        {party.responded && (
-          <p className="comic text-xs mt-1" style={{ color: "#009900" }}>
-            Updating your previous RSVP.
-          </p>
-        )}
       </div>
 
       <hr className="rainbow-hr my-4" />
@@ -265,6 +257,19 @@ export default function RSVPPage() {
       )}
 
       <form onSubmit={handleSubmit} className="bevel-in p-4 md:p-6">
+        <h2
+          className="text-xl md:text-2xl font-bold text-center"
+          style={{ color: "#cc00cc" }}
+        >
+          Hello, {party.name}!
+        </h2>
+        {party.responded && (
+          <p className="comic text-xs text-center mt-1" style={{ color: "#009900" }}>
+            Updating your previous RSVP.
+          </p>
+        )}
+        <hr className="rainbow-hr my-4" />
+
         <p className="font-bold text-sm mb-2">Will you be joining us?</p>
         <label className="mr-4 text-sm cursor-pointer">
           <input
