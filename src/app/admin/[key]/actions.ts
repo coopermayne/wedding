@@ -29,7 +29,7 @@ export async function createPartyAction(formData: FormData) {
   createParty({
     name,
     email: String(formData.get("email") || ""),
-    maxGuests: parseInt(String(formData.get("maxGuests") || "1"), 10) || 1,
+    plusOnes: parseInt(String(formData.get("plusOnes") || "0"), 10) || 0,
     notes: String(formData.get("notes") || ""),
   });
 
@@ -51,7 +51,7 @@ export async function updatePartyAction(formData: FormData) {
   updateParty(String(formData.get("id") || ""), {
     name: String(formData.get("name") || ""),
     email: String(formData.get("email") || ""),
-    maxGuests: parseInt(String(formData.get("maxGuests") || "1"), 10) || 1,
+    plusOnes: parseInt(String(formData.get("plusOnes") || "0"), 10) || 0,
     notes: String(formData.get("notes") || ""),
   });
 

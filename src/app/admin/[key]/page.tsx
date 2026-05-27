@@ -194,12 +194,13 @@ export default async function AdminPage({
               <input type="email" name="email" placeholder="jane@example.com" />
             </div>
             <div>
-              <label className="admin-label">Max guests</label>
+              <label className="admin-label">Plus-ones (0–5)</label>
               <input
                 type="number"
-                name="maxGuests"
-                min={1}
-                defaultValue={1}
+                name="plusOnes"
+                min={0}
+                max={5}
+                defaultValue={0}
                 style={{ width: "6rem" }}
               />
             </div>
@@ -218,14 +219,14 @@ export default async function AdminPage({
             <form action={bulkAddAction} className="mt-3">
               <input type="hidden" name="key" value={key} />
               <p className="text-sm mb-2" style={{ color: "#6b7280" }}>
-                One per line: <code>Name, email, maxGuests</code> (email and max
-                optional). A unique code is generated for each.
+                One per line: <code>Name, email, plus-ones</code> (email and
+                plus-ones optional). A unique code is generated for each.
               </p>
               <textarea
                 name="bulk"
                 rows={5}
                 className="w-full"
-                placeholder={"The Smith Family, smiths@example.com, 4\nJane Doe, jane@example.com, 1"}
+                placeholder={"Jane Doe, jane@example.com, 1\nSam Rivera, sam@example.com, 0"}
               />
               <div className="mt-2">
                 <button type="submit" className="btn btn-primary">
@@ -311,7 +312,9 @@ export default async function AdminPage({
                           </div>
                         )}
                         <div style={{ color: "#9ca3af", fontSize: "0.75rem" }}>
-                          max {p.maxGuests}
+                          {p.plusOnes === 0
+                            ? "no plus-ones"
+                            : `+${p.plusOnes} plus-one${p.plusOnes === 1 ? "" : "s"}`}
                           {p.notes ? ` · ${p.notes}` : ""}
                         </div>
                       </td>
@@ -352,7 +355,7 @@ export default async function AdminPage({
                             id: p.id,
                             name: p.name,
                             email: p.email,
-                            maxGuests: p.maxGuests,
+                            plusOnes: p.plusOnes,
                             notes: p.notes,
                           }}
                           inviteLink={linkFor(p.code)}

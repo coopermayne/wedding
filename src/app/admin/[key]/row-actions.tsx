@@ -7,7 +7,7 @@ type EditableParty = {
   id: string;
   name: string;
   email: string;
-  maxGuests: number;
+  plusOnes: number;
   notes: string;
 };
 
@@ -99,12 +99,13 @@ export function RowActions({
                 />
               </div>
               <div className="mb-3">
-                <label className="admin-label">Max guests</label>
+                <label className="admin-label">Plus-ones (0–5)</label>
                 <input
                   type="number"
-                  min={1}
-                  name="maxGuests"
-                  defaultValue={party.maxGuests}
+                  min={0}
+                  max={5}
+                  name="plusOnes"
+                  defaultValue={party.plusOnes}
                   style={{ width: "6rem" }}
                 />
               </div>

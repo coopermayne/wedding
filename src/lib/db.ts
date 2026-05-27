@@ -31,17 +31,17 @@ export type Party = {
   id: string;
   /** The hash in the invite link, e.g. "a8f3k_jane-doe". */
   code: string;
-  /** Display name: a person ("Jane Doe") or a household ("The Smith Family"). */
+  /** The invited person's name. */
   name: string;
   email: string;
-  /** Max people this invite may bring, including themselves. */
-  maxGuests: number;
+  /** Number of additional guests (plus-ones) this person may bring, 0–5. */
+  plusOnes: number;
   /** null = hasn't responded yet. */
   attending: "yes" | "no" | null;
   song: string;
   /** Admin-only notes, never shown to the guest. */
   notes: string;
-  /** Named attendees, filled in when they RSVP "yes". */
+  /** Attendees they registered: themselves first, then any plus-ones. */
   guests: Guest[];
   createdAt: string;
   /** Set once, the first time they respond. */
@@ -108,10 +108,15 @@ function makeCode(name: string, taken: Set<string>): string {
   return code;
 }
 
+/** Plus-ones are clamped to a sensible 0–5. */
+function clampPlusOnes(n: number | undefined): number {
+  return Math.min(5, Math.max(0, Math.floor(n || 0)));
+}
+
 function newParty(input: {
   name: string;
   email?: string;
-  maxGuests?: number;
+  plusOnes?: number;
   notes?: string;
   taken: Set<string>;
 }): Party {
@@ -120,7 +125,7 @@ function newParty(input: {
     code: makeCode(input.name, input.taken),
     name: input.name.trim(),
     email: (input.email || "").trim(),
-    maxGuests: Math.max(1, input.maxGuests || 1),
+    plusOnes: clampPlusOnes(input.plusOnes),
     attending: null,
     song: "",
     notes: (input.notes || "").trim(),
@@ -176,7 +181,7 @@ export function getStats(): Stats {
 export function createParty(input: {
   name: string;
   email?: string;
-  maxGuests?: number;
+  plusOnes?: number;
   notes?: string;
 }): Party {
   const data = read();
@@ -187,7 +192,7 @@ export function createParty(input: {
   return party;
 }
 
-/** Parses pasted lines of "Name, email, maxGuests" and creates a party for each. */
+/** Parses pasted lines of "Name, email, plusOnes" and creates a party for each. */
 export function bulkCreateParties(text: string): number {
   const data = read();
   const taken = new Set(data.parties.map((p) => p.code));
@@ -195,12 +200,12 @@ export function bulkCreateParties(text: string): number {
   for (const line of text.split("\n")) {
     const trimmed = line.trim();
     if (!trimmed) continue;
-    const [name, email, max] = trimmed.split(",").map((s) => s.trim());
+    const [name, email, plus] = trimmed.split(",").map((s) => s.trim());
     if (!name) continue;
     const party = newParty({
       name,
       email,
-      maxGuests: parseInt(max || "1", 10) || 1,
+      plusOnes: parseInt(plus || "0", 10) || 0,
       taken,
     });
     taken.add(party.code);
@@ -213,14 +218,14 @@ export function bulkCreateParties(text: string): number {
 
 export function updateParty(
   id: string,
-  fields: Partial<Pick<Party, "name" | "email" | "maxGuests" | "notes">>
+  fields: Partial<Pick<Party, "name" | "email" | "plusOnes" | "notes">>
 ): Party | null {
   const data = read();
   const party = data.parties.find((p) => p.id === id);
   if (!party) return null;
   if (fields.name !== undefined) party.name = fields.name.trim();
   if (fields.email !== undefined) party.email = fields.email.trim();
-  if (fields.maxGuests !== undefined) party.maxGuests = Math.max(1, fields.maxGuests);
+  if (fields.plusOnes !== undefined) party.plusOnes = clampPlusOnes(fields.plusOnes);
   if (fields.notes !== undefined) party.notes = fields.notes.trim();
   write(data);
   return party;
@@ -249,10 +254,19 @@ export function submitRsvp(
   party.song = (input.song || "").trim();
   party.guests =
     input.attending === "yes"
-      ? input.guests
-          .slice(0, party.maxGuests)
-          .map((g) => ({ name: (g.name || "").trim(), dietary: (g.dietary || "").trim() }))
-          .filter((g) => g.name.length > 0)
+      ? [
+          // Guest 1 is always the invitee — the name is the invite name, never
+          // whatever was submitted; we only take their dietary note.
+          {
+            name: party.name,
+            dietary: (input.guests[0]?.dietary || "").trim(),
+          },
+          // Then up to plusOnes additional named guests.
+          ...input.guests
+            .slice(1, party.plusOnes + 1)
+            .map((g) => ({ name: (g.name || "").trim(), dietary: (g.dietary || "").trim() }))
+            .filter((g) => g.name.length > 0),
+        ]
       : [];
   if (!party.respondedAt) party.respondedAt = now;
   party.updatedAt = now;

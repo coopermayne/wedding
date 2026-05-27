@@ -45,7 +45,7 @@ export async function GET(
   const header = [
     "Name",
     "Email",
-    "Max Guests",
+    "Plus Ones",
     "Invite Code",
     "Invite Link",
     "Status",
@@ -75,7 +75,7 @@ export async function GET(
       return [
         p.name,
         p.email,
-        String(p.maxGuests),
+        String(p.plusOnes),
         p.code,
         linkFor(p.code),
         statusText,

@@ -10,12 +10,15 @@ type Party = {
   code: string;
   name: string;
   email: string;
-  maxGuests: number;
+  plusOnes: number;
   attending: "yes" | "no" | null;
   song: string;
   guests: GuestRow[];
   responded: boolean;
 };
+
+// Labels for the additional guests beyond the invitee.
+const PLUS_LABELS = ["Plus One", "Plus Two", "Plus Three", "Plus Four", "Plus Five"];
 
 export default function RSVPPage() {
   const params = useParams();
@@ -77,7 +80,9 @@ export default function RSVPPage() {
   }
   function addGuest() {
     setGuests((prev) =>
-      party && prev.length < party.maxGuests ? [...prev, { name: "", dietary: "" }] : prev
+      party && prev.length < party.plusOnes + 1
+        ? [...prev, { name: "", dietary: "" }]
+        : prev
     );
   }
   function removeGuest(i: number) {
@@ -304,9 +309,9 @@ export default function RSVPPage() {
               &#9829; WHO&apos;S COMING? &#9829;
             </p>
             <p className="comic text-center text-xs mb-4" style={{ color: "#666666" }}>
-              {party.maxGuests > 1
-                ? `You can bring up to ${party.maxGuests - 1} other ${
-                    party.maxGuests - 1 === 1 ? "guest" : "guests"
+              {party.plusOnes > 0
+                ? `You can bring up to ${party.plusOnes} ${
+                    party.plusOnes === 1 ? "guest" : "guests"
                   }.`
                 : "Just add any dietary needs below."}
             </p>
@@ -317,7 +322,7 @@ export default function RSVPPage() {
                 <div key={i} className="bevel-in p-3 mb-3">
                   <div className="flex justify-between items-center mb-2">
                     <span className="font-bold text-sm">
-                      {isPrimary ? party.name : `Guest ${i + 1}`}
+                      {isPrimary ? party.name : PLUS_LABELS[i - 1] || `Plus ${i}`}
                     </span>
                     {!isPrimary && (
                       <button
@@ -366,10 +371,10 @@ export default function RSVPPage() {
               );
             })}
 
-            {guests.length < party.maxGuests && (
+            {guests.length < party.plusOnes + 1 && (
               <div className="text-center mb-2">
                 <button type="button" onClick={addGuest} className="btn-90s text-sm">
-                  + Add another guest
+                  + Add a guest
                 </button>
               </div>
             )}

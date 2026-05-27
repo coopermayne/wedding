@@ -20,7 +20,7 @@ export async function GET(request: Request) {
     code: party.code,
     name: party.name,
     email: party.email,
-    maxGuests: party.maxGuests,
+    plusOnes: party.plusOnes,
     attending: party.attending,
     song: party.song,
     guests: party.guests,
@@ -40,19 +40,14 @@ export async function POST(request: Request) {
       );
     }
 
-    const cleanGuests: Guest[] = (Array.isArray(guests) ? guests : [])
-      .map((g) => ({
-        name: String(g?.name || "").trim(),
-        dietary: String(g?.dietary || "").trim(),
-      }))
-      .filter((g) => g.name.length > 0);
-
-    if (attending === "yes" && cleanGuests.length === 0) {
-      return NextResponse.json(
-        { error: "Please add at least one guest name." },
-        { status: 400 }
-      );
-    }
+    // Keep the rows as-sent (don't drop empty names here): the store treats
+    // index 0 as the invitee and derives their name authoritatively, so the
+    // submitted first-row name doesn't matter. Trailing blank plus-one rows are
+    // dropped inside submitRsvp.
+    const cleanGuests: Guest[] = (Array.isArray(guests) ? guests : []).map((g) => ({
+      name: String(g?.name || "").trim(),
+      dietary: String(g?.dietary || "").trim(),
+    }));
 
     const result = submitRsvp(code, {
       attending,
