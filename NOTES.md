@@ -1,56 +1,64 @@
 # Wedding Site — Setup Notes
 
-## Google Sheet Structure
+## RSVP data (JSON file store)
 
-Spreadsheet ID: `12V3yaTMMCYJ-32hxWFhXIRv9BlyRgdhD6AutlKGxBg4`
+All invites and responses live in one JSON file on the persistent volume:
+`${DATA_DIR}/wedding.json` (in Docker that's `/app/data/wedding.json`; in local
+dev it's `./data/wedding.json`). No external database service.
 
-### Tab 1: "Guest List"
-Columns: `Code | Name | Email | PlusOneAllowed | Sent`
+- **Backup** = copy that one file.
+- Safe for a single running container. Do **not** run more than one replica
+  against the same file (writes are serialized per-process, not across processes).
+- Schema and all read/write helpers: `src/lib/db.ts`.
 
-- Each guest gets a unique code (e.g. `abc123`)
-- `PlusOneAllowed` = "yes" or "no"
-- `Sent` column gets marked "sent" by the email script to prevent double-sends
+### Each invite ("party")
+A party is the unit that gets one link: a single person *or* a household.
+Fields: `name`, `email`, `maxGuests`, `attending` (yes/no/null), `song`,
+`notes` (admin-only), `guests[]` (named attendees), timestamps.
 
-### Tab 2: "Sheet1" (rename to "RSVPs" if you want)
-Columns: `Code | Name | Email | Attending | Dietary | Song | Plus One Name | Plus One Dietary | Submitted At`
+### Invite codes / links
+Each party gets a code like `a8f3k_jane-doe` (5 random chars + `_` + the name
+slugified). Personalized link: `https://your-domain.com/rsvp/<code>`.
 
-- RSVP form writes here automatically via Google Sheets API
+## RSVP flow (guest)
 
-## RSVP Flow
+- Guest opens their link `/rsvp/<code>`. Invalid/missing codes see a
+  "use your invite link" message.
+- They accept or decline. If accepting, they add each attendee by name
+  (up to `maxGuests`), with optional dietary notes, plus a song request.
+- Responses are pre-filled on return, so guests can come back and edit any time.
 
-- Each guest gets a personalized link: `https://your-domain.com/rsvp/CODE`
-- Invalid/missing codes see a "use your invite link" message
-- If guest has a +1, form shows a +1 section (name + dietary)
-- If no +1, that section is hidden
-- Success only shown after Google Sheets confirms the row was saved
-- Error shown if save fails
+## Admin
 
-## Email Blast
+- Dashboard: `/admin/<ADMIN_SECRET>` — anything else 404s, and the page is
+  `noindex`. There is no password; keep the URL secret.
+- Shows response metrics, a "latest responses" feed, and the full guest table.
+- Add invites one at a time or bulk-paste `Name, email, maxGuests` lines.
+- Edit / delete any invite.
 
-Script is at `scripts/send-invites.gs` — paste into Extensions > Apps Script in the Google Sheet.
+## Email blast (mailmerge)
 
-1. Update `SITE_URL` in the script to actual domain
-2. Run `sendTestInvite` first to test with row 2
-3. Run `sendInvites` to blast everyone not yet marked "sent"
-4. Sends from coopermayne@gmail.com as "Emily & Max"
+- On the admin page, click **Export CSV**. The file includes each invite's
+  code and **personalized link**, plus all response data.
+- Use that CSV with your email tool's mailmerge (Gmail + a mailmerge add-on,
+  etc.) to send everyone their unique link.
+- (The old `scripts/send-invites.gs` Apps Script is superseded by this.)
 
 ## Coolify Deployment
 
 - Repo: https://github.com/coopermayne/wedding (public)
-- Build: Dockerfile (Next.js standalone)
+- Build: Dockerfile (Next.js standalone), Node 20 Alpine — no native deps.
 - Port: 3000
+- Persistent volume mounted at `/app/data` (already in the Dockerfile).
 - Env vars needed in Coolify:
-  - `GOOGLE_SERVICE_ACCOUNT_EMAIL`
-  - `GOOGLE_PRIVATE_KEY`
-  - `GOOGLE_SPREADSHEET_ID`
-- Service account: `wedding-rsvp@wedding-497504.iam.gserviceaccount.com`
+  - `ADMIN_SECRET` — long random string; the secret admin URL segment.
+  - `SITE_URL` — e.g. `https://your-domain.com` (used to build CSV links).
+- The old `GOOGLE_*` env vars are no longer used.
 
 ## TODO
 
 - [ ] Set up domain in Coolify
-- [ ] Fill out Guest List tab with guests + codes
-- [ ] Update Sheet1 headers to: Code | Name | Email | Attending | Dietary | Song | Plus One Name | Plus One Dietary | Submitted At
-- [ ] Update SITE_URL in the Apps Script
-- [ ] Send test invite to yourself
-- [ ] Send blast to all guests
-- [ ] Show different success message for "Regretfully Decline" vs "Joyfully Accept"
+- [ ] Set `ADMIN_SECRET` and `SITE_URL` in Coolify
+- [ ] Add guests via the admin page (single or bulk)
+- [ ] Export CSV and run the email mailmerge with personalized links
+- [ ] Confirm the `/app/data` volume is backed up

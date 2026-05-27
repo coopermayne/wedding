@@ -42,3 +42,6 @@ next-env.d.ts
 
 # inspiration/source files
 /inspiration
+
+# RSVP database (runtime data, lives on the volume)
+/data/

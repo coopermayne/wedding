@@ -1,23 +1,5 @@
 import { NextResponse } from "next/server";
-import { google } from "googleapis";
-
-function getSheets() {
-  const email = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-  const key = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n");
-  const sheetId = process.env.GOOGLE_SPREADSHEET_ID;
-
-  if (!email || !key || !sheetId) {
-    throw new Error("Missing Google Sheets environment variables");
-  }
-
-  const auth = new google.auth.JWT({
-    email,
-    key,
-    scopes: ["https://www.googleapis.com/auth/spreadsheets"],
-  });
-
-  return { sheets: google.sheets({ version: "v4", auth }), sheetId };
-}
+import { getPartyByCode, submitRsvp, type Guest } from "@/lib/db";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -27,77 +9,59 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No code provided" }, { status: 400 });
   }
 
-  try {
-    const { sheets, sheetId } = getSheets();
-
-    const res = await sheets.spreadsheets.values.get({
-      spreadsheetId: sheetId,
-      range: "Guest List!A:D",
-    });
-
-    const rows = res.data.values || [];
-    const guest = rows.find(
-      (row) => row[0]?.toLowerCase() === code.toLowerCase()
-    );
-
-    if (!guest) {
-      return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
-    }
-
-    return NextResponse.json({
-      code: guest[0],
-      name: guest[1] || "",
-      email: guest[2] || "",
-      plusOneAllowed: guest[3]?.toLowerCase() === "yes",
-    });
-  } catch {
-    return NextResponse.json(
-      { error: "Could not look up your invite. Please try again." },
-      { status: 500 }
-    );
+  const party = getPartyByCode(code);
+  if (!party) {
+    return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
   }
+
+  // Return everything the form needs, including any existing response so the
+  // guest can come back and edit what they previously submitted.
+  return NextResponse.json({
+    code: party.code,
+    name: party.name,
+    email: party.email,
+    maxGuests: party.maxGuests,
+    attending: party.attending,
+    song: party.song,
+    guests: party.guests,
+    responded: party.attending !== null,
+  });
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { code, name, email, attending, dietary, song, plusOneName, plusOneDietary } = body;
+    const { code, attending, song, guests } = body;
 
-    if (!code || !name || !email || !attending) {
+    if (!code || (attending !== "yes" && attending !== "no")) {
       return NextResponse.json(
-        { error: "Name, email, and attendance are required." },
+        { error: "Please tell us whether you can make it." },
         { status: 400 }
       );
     }
 
-    const { sheets, sheetId } = getSheets();
+    const cleanGuests: Guest[] = (Array.isArray(guests) ? guests : [])
+      .map((g) => ({
+        name: String(g?.name || "").trim(),
+        dietary: String(g?.dietary || "").trim(),
+      }))
+      .filter((g) => g.name.length > 0);
 
-    const row = [
-      code,
-      name,
-      email,
-      attending,
-      dietary || "",
-      song || "",
-      plusOneName || "",
-      plusOneDietary || "",
-      new Date().toISOString(),
-    ];
-
-    const response = await sheets.spreadsheets.values.append({
-      spreadsheetId: sheetId,
-      range: "Sheet1!A:I",
-      valueInputOption: "RAW",
-      requestBody: { values: [row] },
-    });
-
-    if (response.status !== 200) {
-      throw new Error("Google Sheets returned status " + response.status);
+    if (attending === "yes" && cleanGuests.length === 0) {
+      return NextResponse.json(
+        { error: "Please add at least one guest name." },
+        { status: 400 }
+      );
     }
 
-    const updatedRows = response.data.updates?.updatedRows;
-    if (!updatedRows || updatedRows < 1) {
-      throw new Error("Row was not written to the spreadsheet");
+    const result = submitRsvp(code, {
+      attending,
+      song: song || "",
+      guests: cleanGuests,
+    });
+
+    if (!result) {
+      return NextResponse.json({ error: "Invalid invite code" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });
