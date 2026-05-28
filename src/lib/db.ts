@@ -155,6 +155,8 @@ export type Stats = {
   accepted: number;
   declined: number;
   headcount: number;
+  /** Max possible attendees if every invitee brought all their plus-ones. */
+  maxInvited: number;
   responseRate: number; // 0..1
 };
 
@@ -166,6 +168,7 @@ export function getStats(): Stats {
   const headcount = parties
     .filter((p) => p.attending === "yes")
     .reduce((sum, p) => sum + p.guests.length, 0);
+  const maxInvited = parties.reduce((sum, p) => sum + 1 + p.plusOnes, 0);
   return {
     totalParties: parties.length,
     responded,
@@ -173,6 +176,7 @@ export function getStats(): Stats {
     accepted,
     declined,
     headcount,
+    maxInvited,
     responseRate: parties.length ? responded / parties.length : 0,
   };
 }
