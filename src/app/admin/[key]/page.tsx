@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getStats, listParties, type Party } from "@/lib/db";
-import { bulkAddAction, createPartyAction } from "./actions";
+import { createPartyAction } from "./actions";
 import { RowActions } from "./row-actions";
 
 export const metadata: Metadata = {
@@ -219,33 +219,6 @@ export default async function AdminPage({
               Add invite
             </button>
           </form>
-
-          <details className="mt-4">
-            <summary
-              className="text-sm font-semibold cursor-pointer"
-              style={{ color: "#4f46e5" }}
-            >
-              Bulk add — paste a list
-            </summary>
-            <form action={bulkAddAction} className="mt-3">
-              <input type="hidden" name="key" value={key} />
-              <p className="text-sm mb-2" style={{ color: "#6b7280" }}>
-                One per line: <code>Name, email, plus-ones</code> (email and
-                plus-ones optional). A unique code is generated for each.
-              </p>
-              <textarea
-                name="bulk"
-                rows={5}
-                className="w-full"
-                placeholder={"Jane Doe, jane@example.com, 1\nSam Rivera, sam@example.com, 0"}
-              />
-              <div className="mt-2">
-                <button type="submit" className="btn btn-primary">
-                  Add all
-                </button>
-              </div>
-            </form>
-          </details>
         </div>
 
         {/* Recent activity */}

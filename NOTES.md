@@ -33,7 +33,7 @@ slugified). Personalized link: `https://your-domain.com/rsvp/<code>`.
 - Dashboard: `/admin/<ADMIN_SECRET>` — anything else 404s, and the page is
   `noindex`. There is no password; keep the URL secret.
 - Shows response metrics, a "latest responses" feed, and the full guest table.
-- Add invites one at a time or bulk-paste `Name, email, maxGuests` lines.
+- Add invites one at a time (name, email, and 0–5 plus-ones).
 - Edit / delete any invite.
 
 ## Email blast (mailmerge)
@@ -59,6 +59,6 @@ slugified). Personalized link: `https://your-domain.com/rsvp/<code>`.
 
 - [ ] Set up domain in Coolify
 - [ ] Set `ADMIN_SECRET` and `SITE_URL` in Coolify
-- [ ] Add guests via the admin page (single or bulk)
+- [ ] Add guests via the admin page
 - [ ] Export CSV and run the email mailmerge with personalized links
 - [ ] Confirm the `/app/data` volume is backed up

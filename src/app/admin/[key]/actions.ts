@@ -1,12 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import {
-  bulkCreateParties,
-  createParty,
-  deleteParty,
-  updateParty,
-} from "@/lib/db";
+import { createParty, deleteParty, updateParty } from "@/lib/db";
 
 // Server Actions are reachable by direct POST, not just through our UI, so each
 // one independently re-checks the secret. The secret rides along as a hidden
@@ -33,14 +28,6 @@ export async function createPartyAction(formData: FormData) {
     notes: String(formData.get("notes") || ""),
   });
 
-  revalidatePath(`/admin/${key}`);
-}
-
-export async function bulkAddAction(formData: FormData) {
-  const key = formData.get("key");
-  assertKey(key);
-
-  bulkCreateParties(String(formData.get("bulk") || ""));
   revalidatePath(`/admin/${key}`);
 }
 

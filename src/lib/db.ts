@@ -197,30 +197,6 @@ export function createParty(input: {
   return party;
 }
 
-/** Parses pasted lines of "Name, email, plusOnes" and creates a party for each. */
-export function bulkCreateParties(text: string): number {
-  const data = read();
-  const taken = new Set(data.parties.map((p) => p.code));
-  let count = 0;
-  for (const line of text.split("\n")) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const [name, email, plus] = trimmed.split(",").map((s) => s.trim());
-    if (!name) continue;
-    const party = newParty({
-      name,
-      email,
-      plusOnes: parseInt(plus || "0", 10) || 0,
-      taken,
-    });
-    taken.add(party.code);
-    data.parties.push(party);
-    count++;
-  }
-  write(data);
-  return count;
-}
-
 export function updateParty(
   id: string,
   fields: Partial<Pick<Party, "name" | "email" | "plusOnes" | "notes">>
