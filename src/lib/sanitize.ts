@@ -8,11 +8,15 @@
 // the CSV export or pull any other funny business.
 
 const DISALLOWED = /[^\p{L}\p{M}\p{N} '\-.,()/&]/gu;
+// Combining marks not attached to a letter — e.g. an emoji variation selector
+// left behind after its base emoji was stripped. We keep marks that follow a
+// letter so accented and non-Latin scripts (José, नमस्ते, etc.) stay intact.
+const ORPHAN_MARKS = /(?<!\p{L})\p{M}+/gu;
 const LEADING_FORMULA = /^[=+\-@\t\r]+/;
 
 /** Live filter for form inputs: drop disallowed characters, keep spacing as typed. */
 export function stripDisallowedChars(input: string): string {
-  return (input ?? "").replace(DISALLOWED, "");
+  return (input ?? "").replace(DISALLOWED, "").replace(ORPHAN_MARKS, "");
 }
 
 /**
