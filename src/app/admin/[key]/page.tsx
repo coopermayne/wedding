@@ -77,13 +77,23 @@ export default async function AdminPage({
   const pct = Math.round(stats.responseRate * 100);
 
   const statCells = [
-    { label: "Invites", value: stats.totalParties, color: "#111827" },
+    {
+      label: "Invites (+1s)",
+      value: (
+        <>
+          {stats.totalParties}{" "}
+          <span style={{ fontSize: "1rem", color: "#9ca3af", fontWeight: 600 }}>
+            ({stats.maxInvited})
+          </span>
+        </>
+      ),
+      color: "#111827",
+    },
     { label: "Responded", value: stats.responded, color: "#4f46e5" },
     { label: "Pending", value: stats.pending, color: "#b45309" },
     { label: "Accepted", value: stats.accepted, color: "#166534" },
     { label: "Declined", value: stats.declined, color: "#991b1b" },
     { label: "Headcount", value: stats.headcount, color: "#7c3aed" },
-    { label: "Max invited", value: stats.maxInvited, color: "#0891b2" },
   ];
 
   const filters: { f: Filter; label: string; count: number }[] = [
@@ -130,7 +140,7 @@ export default async function AdminPage({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
           {statCells.map((c) => (
             <div key={c.label} className="stat-card">
               <div className="stat-value" style={{ color: c.color }}>
