@@ -131,7 +131,7 @@ export default async function Home({
       {/* Visitor counter */}
       <div className="text-center my-6">
         <p className="text-xs mb-1">You are visitor number:</p>
-        <span className="counter">000{Math.floor(Math.random() * 900 + 100)}</span>
+        <span className="counter">000{200 + Math.floor(Math.random() * 501)}</span>
       </div>
 
       {/* Footer */}
