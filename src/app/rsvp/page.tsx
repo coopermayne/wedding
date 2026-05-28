@@ -1,6 +1,16 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { getPartyByCode } from "@/lib/db";
 
-export default function RSVPLanding() {
+export default async function RSVPLanding() {
+  // If we remember this guest from their invite link (cookie set on arrival),
+  // send them straight to their form instead of asking for the link again.
+  const code = (await cookies()).get("invite")?.value;
+  if (code && getPartyByCode(code)) {
+    redirect(`/rsvp/${encodeURIComponent(code)}`);
+  }
+
   return (
     <div className="max-w-lg mx-auto px-4 py-6 text-center my-16">
       <h1

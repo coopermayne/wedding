@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { getPartyByCode } from "@/lib/db";
 
 export default async function Home({
@@ -7,10 +8,12 @@ export default async function Home({
 }: {
   searchParams: Promise<{ i?: string }>;
 }) {
-  // Personalized invite links land here as /?i=<code>. If the code resolves to
-  // an invite, we greet them by name and point the RSVP button at their form.
+  // Personalized invite links land here as /?i=<code>. We also fall back to the
+  // "invite" cookie (set on arrival) so the greeting persists as they navigate
+  // the site and come back to the home page without the code in the URL.
   const { i } = await searchParams;
-  const party = i ? getPartyByCode(i) : null;
+  const code = i || (await cookies()).get("invite")?.value;
+  const party = code ? getPartyByCode(code) : null;
   const rsvpHref = party ? `/rsvp/${party.code}` : "/rsvp";
 
   return (
