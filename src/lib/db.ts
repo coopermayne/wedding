@@ -7,6 +7,7 @@ import {
   writeFileSync,
 } from "fs";
 import path from "path";
+import { sanitizeText } from "./sanitize";
 
 // ---------------------------------------------------------------------------
 // JSON file store
@@ -123,7 +124,7 @@ function newParty(input: {
   return {
     id: randomUUID(),
     code: makeCode(input.name, input.taken),
-    name: input.name.trim(),
+    name: sanitizeText(input.name, 100),
     email: (input.email || "").trim(),
     plusOnes: clampPlusOnes(input.plusOnes),
     attending: null,
@@ -223,7 +224,7 @@ export function updateParty(
   const data = read();
   const party = data.parties.find((p) => p.id === id);
   if (!party) return null;
-  if (fields.name !== undefined) party.name = fields.name.trim();
+  if (fields.name !== undefined) party.name = sanitizeText(fields.name, 100);
   if (fields.email !== undefined) party.email = fields.email.trim();
   if (fields.plusOnes !== undefined) party.plusOnes = clampPlusOnes(fields.plusOnes);
   if (fields.notes !== undefined) party.notes = fields.notes.trim();
@@ -251,7 +252,7 @@ export function submitRsvp(
 
   const now = new Date().toISOString();
   party.attending = input.attending;
-  party.song = (input.song || "").trim();
+  party.song = sanitizeText(input.song || "", 120);
   party.guests =
     input.attending === "yes"
       ? [
@@ -259,12 +260,15 @@ export function submitRsvp(
           // whatever was submitted; we only take their dietary note.
           {
             name: party.name,
-            dietary: (input.guests[0]?.dietary || "").trim(),
+            dietary: sanitizeText(input.guests[0]?.dietary || "", 150),
           },
           // Then up to plusOnes additional named guests.
           ...input.guests
             .slice(1, party.plusOnes + 1)
-            .map((g) => ({ name: (g.name || "").trim(), dietary: (g.dietary || "").trim() }))
+            .map((g) => ({
+              name: sanitizeText(g.name || "", 100),
+              dietary: sanitizeText(g.dietary || "", 150),
+            }))
             .filter((g) => g.name.length > 0),
         ]
       : [];

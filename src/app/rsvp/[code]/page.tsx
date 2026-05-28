@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
+import { stripDisallowedChars } from "@/lib/sanitize";
 
 type GuestRow = { name: string; dietary: string };
 
@@ -76,7 +77,8 @@ export default function RSVPPage() {
   }
 
   function updateGuest(i: number, field: keyof GuestRow, value: string) {
-    setGuests((prev) => prev.map((g, idx) => (idx === i ? { ...g, [field]: value } : g)));
+    const clean = stripDisallowedChars(value);
+    setGuests((prev) => prev.map((g, idx) => (idx === i ? { ...g, [field]: clean } : g)));
   }
   function addGuest() {
     setGuests((prev) =>
@@ -356,6 +358,7 @@ export default function RSVPPage() {
                         onChange={(e) => updateGuest(i, "name", e.target.value)}
                         placeholder="Full name"
                         className="w-full mb-2"
+                        maxLength={100}
                       />
                     </>
                   )}
@@ -370,6 +373,7 @@ export default function RSVPPage() {
                     onChange={(e) => updateGuest(i, "dietary", e.target.value)}
                     placeholder="e.g. vegetarian, gluten free, none"
                     className="w-full"
+                    maxLength={150}
                   />
                 </div>
               );
@@ -388,8 +392,9 @@ export default function RSVPPage() {
             <input
               type="text"
               value={song}
-              onChange={(e) => setSong(e.target.value)}
+              onChange={(e) => setSong(stripDisallowedChars(e.target.value))}
               className="w-full"
+              maxLength={120}
               placeholder="What should we play at the afterparty?"
             />
           </>

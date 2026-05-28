@@ -1,7 +1,11 @@
 import { listParties } from "@/lib/db";
 
 function csvField(value: string): string {
-  const s = String(value ?? "");
+  let s = String(value ?? "");
+  // Defense-in-depth against spreadsheet formula injection: a leading = + - @
+  // (or tab/CR) makes Excel/Sheets treat the cell as a formula. Inputs are
+  // already sanitized on the way in; this guards any value regardless.
+  if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
 }
 
