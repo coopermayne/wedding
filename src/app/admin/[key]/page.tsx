@@ -191,6 +191,22 @@ export default async function AdminPage({
           </div>
         </div>
 
+        {/* Backup */}
+        <div className="admin-card p-4 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="font-semibold">Backup</h2>
+              <p className="text-sm" style={{ color: "#6b7280" }}>
+                A full snapshot of every invite and response. Download one now and
+                then and keep it somewhere safe.
+              </p>
+            </div>
+            <a className="btn btn-secondary" href={`/admin/${key}/backup`} download>
+              Download backup (JSON)
+            </a>
+          </div>
+        </div>
+
         {/* Add invite */}
         <div className="admin-card p-4 mb-6">
           <h2 className="font-semibold mb-3">Add an invite</h2>
