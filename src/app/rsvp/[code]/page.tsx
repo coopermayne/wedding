@@ -202,11 +202,15 @@ export default function RSVPPage() {
             </p>
             <ul className="text-sm mb-3">
               {party.guests.map((g, i) => (
-                <li key={i} className="mb-1">
-                  &#9829; {g.name}
-                  {g.dietary && (
-                    <span style={{ color: "#cc0000" }}> &mdash; {g.dietary}</span>
-                  )}
+                <li key={i} className="mb-2">
+                  &#9829; <span className="font-bold">{g.name}</span>
+                  <br />
+                  <span className="text-xs" style={{ color: "#666666" }}>
+                    Food &amp; dietary needs:{" "}
+                    <span style={{ color: "#cc0000" }}>
+                      {g.dietary || "none given"}
+                    </span>
+                  </span>
                 </li>
               ))}
             </ul>
