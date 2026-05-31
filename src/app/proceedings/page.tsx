@@ -166,9 +166,6 @@ export default function Proceedings() {
             />
           </div>
         </div>
-        <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
-          karaoke practice for the afterparty
-        </p>
       </div>
 
       <div className="text-center my-4">

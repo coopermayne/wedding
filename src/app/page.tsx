@@ -1,21 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { getPartyByCode } from "@/lib/db";
 
-export default async function Home({
-  searchParams,
-}: {
-  searchParams: Promise<{ i?: string }>;
-}) {
-  // Personalized invite links land here as /?i=<code>. We also fall back to the
-  // "invite" cookie (set on arrival) so the greeting persists as they navigate
-  // the site and come back to the home page without the code in the URL.
-  const { i } = await searchParams;
-  const code = i || (await cookies()).get("invite")?.value;
-  const party = code ? getPartyByCode(code) : null;
-  const rsvpHref = party ? `/rsvp/${party.code}` : "/rsvp";
-
+export default function Home() {
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
 
@@ -85,20 +71,6 @@ export default async function Home({
             WHERE TO STAY
           </Link>
         </div>
-        <div>
-          <Link
-            href={rsvpHref}
-            className="highlight-magenta text-base no-underline blink link-glow"
-          >
-            &#9829; RSVP HERE &#9829;
-          </Link>
-          {party && (
-            <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
-              {party.attending !== null ? "✓ RSVP received — " : ""}
-              for {party.name}
-            </p>
-          )}
-        </div>
       </div>
 
       <hr className="rainbow-hr my-4" />
@@ -116,7 +88,7 @@ export default async function Home({
           </div>
         </div>
         <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
-          us + our cat (the real star)
+          us + our cat MONK (the real star)
         </p>
       </div>
 

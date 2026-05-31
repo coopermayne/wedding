@@ -92,11 +92,6 @@ export default function WhereToStay() {
 
       {/* Intro */}
       <div className="bevel-in p-4 my-6">
-        <p className="text-base mb-3">
-          We both arrived in Los Angeles in the summer of 2023 and met and fell
-          in love here. We&apos;re excited for you to enjoy it and celebrate
-          with us.
-        </p>
         <p className="text-base">
           LA is sprawling with lots of gem villages that have distinct
           personalities. We live on the east side in{" "}
