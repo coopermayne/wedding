@@ -55,6 +55,11 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Run on page routes only; skip API and static assets.
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|robots.txt).*)"],
+  // Run on page routes only; skip API and static assets. `images` is the
+  // public photo folder: the next/image optimizer fetches those originals
+  // server-side without the user's auth cookie, so gating them would bounce
+  // the optimizer to /gate and break every <Image> on the site.
+  matcher: [
+    "/((?!api|_next/static|_next/image|images|favicon.ico|robots.txt).*)",
+  ],
 };
