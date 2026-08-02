@@ -1,4 +1,5 @@
-import { listParties } from "@/lib/db";
+import { hasResponded, listParties, matchesFilter } from "@/lib/db";
+import { RSVP_EVENTS } from "@/lib/events";
 
 function csvField(value: string): string {
   let s = String(value ?? "");
@@ -7,27 +8,6 @@ function csvField(value: string): string {
   // already sanitized on the way in; this guards any value regardless.
   if (/^[=+\-@\t\r]/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-}
-
-// Which segment to export. Drives the mailmerge use cases:
-//   pending   -> reminder emails ("you haven't RSVP'd!")
-//   attending -> confirmation emails ("you're all set!")
-//   declined  -> the regrets list
-//   responded -> everyone who has answered either way
-//   all       -> everyone (default)
-function matchesStatus(attending: "yes" | "no" | null, status: string): boolean {
-  switch (status) {
-    case "pending":
-      return attending === null;
-    case "attending":
-      return attending === "yes";
-    case "declined":
-      return attending === "no";
-    case "responded":
-      return attending !== null;
-    default:
-      return true;
-  }
 }
 
 export async function GET(
@@ -46,15 +26,22 @@ export async function GET(
   const linkFor = (code: string) =>
     siteUrl ? `${siteUrl}/?i=${code}` : `/?i=${code}`;
 
+  // Each event contributes three columns: did they answer, how many are
+  // coming, and who — so the caterer and the restaurant each get their own
+  // number straight out of the spreadsheet.
   const header = [
     "Name",
     "Email",
     "Plus Ones",
     "Invite Code",
     "Invite Link",
-    "Status",
-    "Attending Count",
-    "Guests",
+    "Responded",
+    ...RSVP_EVENTS.flatMap((e) => [
+      `${e.label} status`,
+      `${e.label} count`,
+      `${e.label} guests`,
+    ]),
+    "Party Roster",
     "Dietary",
     "Song",
     "Responded At",
@@ -62,19 +49,27 @@ export async function GET(
   ];
 
   const rows = listParties()
-    .filter((p) => matchesStatus(p.attending, status))
+    .filter((p) => matchesFilter(p, status))
     .map((p) => {
-      const statusText =
-        p.attending === "yes"
-          ? "Attending"
-          : p.attending === "no"
-            ? "Declined"
-            : "No response";
-      const guestNames = p.guests.map((g) => g.name).join("; ");
       const dietary = p.guests
         .filter((g) => g.dietary)
         .map((g) => `${g.name}: ${g.dietary}`)
         .join("; ");
+
+      const eventCells = RSVP_EVENTS.flatMap((e) => {
+        const answer = p.events[e.key];
+        const statusText =
+          answer.attending === "yes"
+            ? "Attending"
+            : answer.attending === "no"
+              ? "Declined"
+              : "No response";
+        return [
+          statusText,
+          answer.attending === "yes" ? String(answer.attendees.length) : "0",
+          answer.attendees.join("; "),
+        ];
+      });
 
       return [
         p.name,
@@ -82,9 +77,9 @@ export async function GET(
         String(p.plusOnes),
         p.code,
         linkFor(p.code),
-        statusText,
-        p.attending === "yes" ? String(p.guests.length) : "0",
-        guestNames,
+        hasResponded(p) ? "Yes" : "No",
+        ...eventCells,
+        p.guests.map((g) => g.name).join("; "),
         dietary,
         p.song,
         p.respondedAt || "",

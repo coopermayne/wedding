@@ -18,8 +18,64 @@ export default function Proceedings() {
       <hr className="rainbow-hr my-4" />
 
       <div className="text-center mb-6">
-        <span className="highlight-purple text-lg">OCTOBER 24, 2026</span>
+        <span className="highlight-purple text-lg">OCTOBER 23 &ndash; 24, 2026</span>
       </div>
+
+      {/* Friday Welcome */}
+      <div className="my-8 text-center">
+        <div className="inline-block mb-4" style={{ borderBottom: "3px double #009900" }}>
+          <h2 className="text-2xl md:text-3xl font-bold px-4 pb-1" style={{ color: "#009900" }}>
+            <span style={{ color: "#ffcc00", fontSize: "1.2em" }}>&#10038;</span>
+            {" "}WELCOME PUPUSAS + BEER{" "}
+            <span style={{ color: "#ffcc00", fontSize: "1.2em" }}>&#10038;</span>
+          </h2>
+        </div>
+      </div>
+
+      <div className="my-4 p-1" style={{ background: "#009900" }}>
+        <div className="p-4" style={{ background: "#eeffee" }}>
+          <table className="w-full" style={{ borderCollapse: "collapse" }}>
+            <tbody>
+              <tr>
+                <td className="font-bold text-center p-3 align-middle" style={{ background: "#cceecc", border: "2px ridge #99cc99", width: "110px" }}>
+                  Time
+                </td>
+                <td className="p-3" style={{ border: "2px ridge #99cc99" }}>
+                  <span className="text-lg font-bold" style={{ color: "#006600" }}>
+                    Friday, Oct 23 &ndash; 7:00 p.m.
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td className="font-bold text-center p-3 align-middle" style={{ background: "#cceecc", border: "2px ridge #99cc99" }}>
+                  Location
+                </td>
+                <td className="p-3 text-lg font-bold" style={{ border: "2px ridge #99cc99", color: "#006600" }}>
+                  Cojutepeque Restaurant
+                </td>
+              </tr>
+              <tr>
+                <td className="font-bold text-center p-3 align-middle" style={{ background: "#cceecc", border: "2px ridge #99cc99" }}>
+                  Address
+                </td>
+                <td className="p-3 courier" style={{ border: "2px ridge #99cc99" }}>
+                  2610 W. 3rd St.
+                  <br />
+                  Los Angeles, CA
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="text-center my-2">
+        <p className="comic text-xs" style={{ color: "#999999" }}>
+          (come say hi before the big day)
+        </p>
+      </div>
+
+      <hr className="rainbow-hr my-6" />
 
       {/* The Wedding */}
       <div className="my-8 text-center">

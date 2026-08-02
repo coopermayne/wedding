@@ -107,7 +107,7 @@ export default async function Home({
           </Link>
           {party && (
             <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
-              {party.attending !== null ? "✓ RSVP received — " : ""}
+              {party.respondedAt !== null ? "✓ RSVP received — " : ""}
               for {party.name}
             </p>
           )}

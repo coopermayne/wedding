@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getStats, listParties, type Party } from "@/lib/db";
+import { getStats, listParties, matchesFilter } from "@/lib/db";
+import { RSVP_EVENTS } from "@/lib/events";
 import { createPartyAction } from "./actions";
 import { RowActions } from "./row-actions";
 
@@ -23,16 +24,9 @@ function fmtDate(iso: string | null): string {
   });
 }
 
-type Filter = "all" | "pending" | "attending" | "declined";
+type Attending = "yes" | "no" | null;
 
-function matchesFilter(attending: Party["attending"], filter: Filter): boolean {
-  if (filter === "pending") return attending === null;
-  if (filter === "attending") return attending === "yes";
-  if (filter === "declined") return attending === "no";
-  return true;
-}
-
-function StatusBadge({ attending }: { attending: Party["attending"] }) {
+function StatusBadge({ attending }: { attending: Attending }) {
   if (attending === "yes")
     return <span className="badge badge-yes">Attending</span>;
   if (attending === "no") return <span className="badge badge-no">Declined</span>;
@@ -52,11 +46,12 @@ export default async function AdminPage({
   }
 
   const { filter: filterParam } = await searchParams;
-  const filter: Filter = (["pending", "attending", "declined"] as const).includes(
-    filterParam as "pending" | "attending" | "declined"
-  )
-    ? (filterParam as Filter)
-    : "all";
+  const validFilters = [
+    "pending",
+    "responded",
+    ...RSVP_EVENTS.flatMap((e) => [`${e.key}-yes`, `${e.key}-no`]),
+  ];
+  const filter = validFilters.includes(filterParam || "") ? filterParam! : "all";
 
   const stats = getStats();
   const parties = listParties();
@@ -67,7 +62,7 @@ export default async function AdminPage({
     siteUrl ? `${siteUrl}/?i=${code}` : `/?i=${code}`;
 
   const visible = [...parties]
-    .filter((p) => matchesFilter(p.attending, filter))
+    .filter((p) => matchesFilter(p, filter))
     .sort((a, b) => a.name.localeCompare(b.name));
   const recent = [...parties]
     .filter((p) => p.respondedAt)
@@ -91,16 +86,30 @@ export default async function AdminPage({
     },
     { label: "Responded", value: stats.responded, color: "#4f46e5" },
     { label: "Pending", value: stats.pending, color: "#b45309" },
-    { label: "Accepted", value: stats.accepted, color: "#166534" },
-    { label: "Declined", value: stats.declined, color: "#991b1b" },
-    { label: "Headcount", value: stats.headcount, color: "#7c3aed" },
+    // One headcount per event — the number that actually matters for booking
+    // the restaurant and the caterer.
+    ...RSVP_EVENTS.map((e, i) => ({
+      label: `${e.label} headcount`,
+      value: stats.events[e.key].headcount,
+      color: i === 0 ? "#0f766e" : "#7c3aed",
+    })),
   ];
 
-  const filters: { f: Filter; label: string; count: number }[] = [
+  const filters: { f: string; label: string; count: number }[] = [
     { f: "all", label: "All", count: stats.totalParties },
     { f: "pending", label: "Not responded", count: stats.pending },
-    { f: "attending", label: "Attending", count: stats.accepted },
-    { f: "declined", label: "Declined", count: stats.declined },
+    ...RSVP_EVENTS.flatMap((e) => [
+      {
+        f: `${e.key}-yes`,
+        label: `${e.label}: yes`,
+        count: stats.events[e.key].accepted,
+      },
+      {
+        f: `${e.key}-no`,
+        label: `${e.label}: no`,
+        count: stats.events[e.key].declined,
+      },
+    ]),
   ];
 
   return (
@@ -140,7 +149,7 @@ export default async function AdminPage({
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
           {statCells.map((c) => (
             <div key={c.label} className="stat-card">
               <div className="stat-value" style={{ color: c.color }}>
@@ -173,20 +182,16 @@ export default async function AdminPage({
               >
                 Not responded ({stats.pending})
               </a>
-              <a
-                className="btn btn-secondary"
-                href={`/admin/${key}/export?status=attending`}
-                download
-              >
-                Attending ({stats.accepted})
-              </a>
-              <a
-                className="btn btn-secondary"
-                href={`/admin/${key}/export?status=declined`}
-                download
-              >
-                Declined ({stats.declined})
-              </a>
+              {RSVP_EVENTS.map((e) => (
+                <a
+                  key={e.key}
+                  className="btn btn-secondary"
+                  href={`/admin/${key}/export?status=${e.key}-yes`}
+                  download
+                >
+                  {e.label}: yes ({stats.events[e.key].accepted})
+                </a>
+              ))}
             </div>
           </div>
         </div>
@@ -248,13 +253,20 @@ export default async function AdminPage({
                   className="flex items-center gap-2 py-1"
                   style={{ borderBottom: "1px solid #f1f5f9" }}
                 >
-                  <StatusBadge attending={p.attending} />
                   <span className="font-medium">{p.name}</span>
-                  {p.attending === "yes" && (
-                    <span style={{ color: "#6b7280" }}>
-                      · {p.guests.length} guest{p.guests.length === 1 ? "" : "s"}
-                    </span>
-                  )}
+                  {RSVP_EVENTS.map((e) => {
+                    const answer = p.events[e.key];
+                    return (
+                      <span key={e.key} style={{ color: "#6b7280", fontSize: "0.8rem" }}>
+                        {e.label}:{" "}
+                        {answer.attending === "yes"
+                          ? `${answer.attendees.length}`
+                          : answer.attending === "no"
+                            ? "no"
+                            : "—"}
+                      </span>
+                    );
+                  })}
                   <span className="ml-auto" style={{ color: "#9ca3af" }}>
                     {fmtDate(p.updatedAt)}
                   </span>
@@ -295,8 +307,10 @@ export default async function AdminPage({
                 <thead>
                   <tr>
                     <th>Guest</th>
-                    <th>Status</th>
-                    <th>Party &amp; details</th>
+                    {RSVP_EVENTS.map((e) => (
+                      <th key={e.key}>{e.label}</th>
+                    ))}
+                    <th>Dietary &amp; song</th>
                     <th>Responded</th>
                     <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
@@ -318,23 +332,32 @@ export default async function AdminPage({
                           {p.notes ? ` · ${p.notes}` : ""}
                         </div>
                       </td>
+                      {RSVP_EVENTS.map((e) => {
+                        const answer = p.events[e.key];
+                        return (
+                          <td key={e.key}>
+                            <StatusBadge attending={answer.attending} />
+                            {answer.attending === "yes" && (
+                              <ul style={{ margin: "0.25rem 0 0" }}>
+                                {answer.attendees.map((name, i) => (
+                                  <li key={i}>{name}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </td>
+                        );
+                      })}
                       <td>
-                        <StatusBadge attending={p.attending} />
-                      </td>
-                      <td>
-                        {p.attending === "yes" && p.guests.length > 0 ? (
+                        {p.guests.some((g) => g.dietary) ? (
                           <ul style={{ margin: 0 }}>
-                            {p.guests.map((g, i) => (
-                              <li key={i}>
-                                {g.name}
-                                {g.dietary && (
-                                  <span style={{ color: "#b45309" }}>
-                                    {" "}
-                                    · {g.dietary}
-                                  </span>
-                                )}
-                              </li>
-                            ))}
+                            {p.guests
+                              .filter((g) => g.dietary)
+                              .map((g, i) => (
+                                <li key={i}>
+                                  {g.name}
+                                  <span style={{ color: "#b45309" }}> · {g.dietary}</span>
+                                </li>
+                              ))}
                           </ul>
                         ) : (
                           <span style={{ color: "#9ca3af" }}>—</span>

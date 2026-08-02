@@ -8,6 +8,7 @@ import {
 } from "fs";
 import path from "path";
 import { sanitizeText } from "./sanitize";
+import { isRsvpEventKey, RSVP_EVENT_KEYS, type RsvpEventKey } from "./events";
 
 // ---------------------------------------------------------------------------
 // JSON file store
@@ -28,6 +29,14 @@ export type Guest = {
   dietary: string;
 };
 
+/** One event's answer: are you coming, and which of your party is coming. */
+export type EventRsvp = {
+  /** null = hasn't answered this event yet. */
+  attending: "yes" | "no" | null;
+  /** Names, drawn from the party roster below. Empty when not attending. */
+  attendees: string[];
+};
+
 export type Party = {
   id: string;
   /** The hash in the invite link, e.g. "a8f3k_jane-doe". */
@@ -37,21 +46,65 @@ export type Party = {
   email: string;
   /** Number of additional guests (plus-ones) this person may bring, 0–5. */
   plusOnes: number;
-  /** null = hasn't responded yet. */
-  attending: "yes" | "no" | null;
+  /**
+   * The party roster: everyone this invite covers, invitee first, with their
+   * dietary notes. Entered once; each event then picks from these names, since
+   * plenty of people come Saturday but not Friday.
+   */
+  guests: Guest[];
+  /** One answer per RSVP event (see lib/events). */
+  events: Record<RsvpEventKey, EventRsvp>;
   song: string;
   /** Admin-only notes, never shown to the guest. */
   notes: string;
-  /** Attendees they registered: themselves first, then any plus-ones. */
-  guests: Guest[];
   createdAt: string;
-  /** Set once, the first time they respond. */
+  /** Set once, the first time they respond to anything. */
   respondedAt: string | null;
   /** Updated every time they save. */
   updatedAt: string | null;
 };
 
 type DbShape = { parties: Party[] };
+
+/** The shape parties had before the weekend was split into separate events. */
+type LegacyParty = Party & { attending?: "yes" | "no" | null };
+
+function emptyEvents(): Record<RsvpEventKey, EventRsvp> {
+  const out = {} as Record<RsvpEventKey, EventRsvp>;
+  for (const key of RSVP_EVENT_KEYS) out[key] = { attending: null, attendees: [] };
+  return out;
+}
+
+/**
+ * Bring a stored party up to the current shape. Responses written before the
+ * weekend was split into separate events were answers about the wedding, so
+ * that's where they land; the other events start unanswered.
+ */
+function migrate(raw: LegacyParty): Party {
+  const guests: Guest[] = Array.isArray(raw.guests)
+    ? raw.guests.map((g) => ({ name: g?.name || "", dietary: g?.dietary || "" }))
+    : [];
+
+  const events = emptyEvents();
+  for (const key of RSVP_EVENT_KEYS) {
+    const stored = raw.events?.[key];
+    if (stored) {
+      events[key] = {
+        attending: stored.attending ?? null,
+        attendees: Array.isArray(stored.attendees) ? stored.attendees : [],
+      };
+    } else if (key === "wedding" && raw.attending !== undefined) {
+      events[key] = {
+        attending: raw.attending ?? null,
+        attendees: raw.attending === "yes" ? guests.map((g) => g.name) : [],
+      };
+    }
+  }
+
+  const { attending: _legacy, ...rest } = raw;
+  void _legacy;
+  return { ...rest, guests, events };
+}
 
 const DATA_DIR = process.env.DATA_DIR || path.join(process.cwd(), "data");
 const DB_PATH = path.join(DATA_DIR, "wedding.json");
@@ -65,8 +118,10 @@ function read(): DbShape {
   if (!existsSync(DB_PATH)) return { parties: [] };
   const raw = readFileSync(DB_PATH, "utf8");
   if (!raw.trim()) return { parties: [] };
-  const data = JSON.parse(raw) as DbShape;
-  return { parties: Array.isArray(data.parties) ? data.parties : [] };
+  const data = JSON.parse(raw) as { parties?: LegacyParty[] };
+  return {
+    parties: Array.isArray(data.parties) ? data.parties.map(migrate) : [],
+  };
 }
 
 function write(data: DbShape) {
@@ -127,10 +182,10 @@ function newParty(input: {
     name: sanitizeText(input.name, 100),
     email: (input.email || "").trim(),
     plusOnes: clampPlusOnes(input.plusOnes),
-    attending: null,
     song: "",
     notes: (input.notes || "").trim(),
     guests: [],
+    events: emptyEvents(),
     createdAt: new Date().toISOString(),
     respondedAt: null,
     updatedAt: null,
@@ -148,36 +203,71 @@ export function getPartyByCode(code: string): Party | null {
   return read().parties.find((p) => p.code.toLowerCase() === lc) || null;
 }
 
+/** Has this party submitted the form at all? Drives reminder emails. */
+export function hasResponded(party: Party): boolean {
+  return party.respondedAt !== null;
+}
+
+// Segments used by both the admin filter chips and the CSV export:
+//   pending        -> reminder emails ("you haven't RSVP'd!")
+//   responded      -> everyone who has answered
+//   <event>-yes/no -> that event's attending / declined list
+export function matchesFilter(party: Party, filter: string): boolean {
+  if (filter === "pending") return !hasResponded(party);
+  if (filter === "responded") return hasResponded(party);
+  const [key, answer] = filter.split("-");
+  if (isRsvpEventKey(key) && (answer === "yes" || answer === "no")) {
+    return party.events[key].attending === answer;
+  }
+  return true;
+}
+
+export type EventStats = {
+  accepted: number;
+  declined: number;
+  pending: number;
+  /** People coming to this event, counted across all parties. */
+  headcount: number;
+};
+
 export type Stats = {
   totalParties: number;
   responded: number;
   pending: number;
-  accepted: number;
-  declined: number;
-  headcount: number;
   /** Max possible attendees if every invitee brought all their plus-ones. */
   maxInvited: number;
   responseRate: number; // 0..1
+  events: Record<RsvpEventKey, EventStats>;
 };
 
 export function getStats(): Stats {
   const parties = read().parties;
-  const responded = parties.filter((p) => p.attending !== null).length;
-  const accepted = parties.filter((p) => p.attending === "yes").length;
-  const declined = parties.filter((p) => p.attending === "no").length;
-  const headcount = parties
-    .filter((p) => p.attending === "yes")
-    .reduce((sum, p) => sum + p.guests.length, 0);
-  const maxInvited = parties.reduce((sum, p) => sum + 1 + p.plusOnes, 0);
+  const responded = parties.filter(hasResponded).length;
+
+  const events = Object.fromEntries(
+    RSVP_EVENT_KEYS.map((key) => {
+      const answers = parties.map((p) => p.events[key]);
+      return [
+        key,
+        {
+          accepted: answers.filter((e) => e.attending === "yes").length,
+          declined: answers.filter((e) => e.attending === "no").length,
+          pending: answers.filter((e) => e.attending === null).length,
+          headcount: answers
+            .filter((e) => e.attending === "yes")
+            .reduce((sum, e) => sum + e.attendees.length, 0),
+        },
+      ];
+    })
+  ) as Record<RsvpEventKey, EventStats>;
+
   return {
     totalParties: parties.length,
     responded,
     pending: parties.length - responded,
-    accepted,
-    declined,
-    headcount,
-    maxInvited,
+    maxInvited: parties.reduce((sum, p) => sum + 1 + p.plusOnes, 0),
     responseRate: parties.length ? responded / parties.length : 0,
+    events,
   };
 }
 
@@ -221,37 +311,58 @@ export function deleteParty(id: string): boolean {
   return true;
 }
 
-export function submitRsvp(
-  code: string,
-  input: { attending: "yes" | "no"; song: string; guests: Guest[] }
-): Party | null {
+export type RsvpSubmission = {
+  /** The party roster: invitee first, then any plus-ones they're bringing. */
+  guests: Guest[];
+  song: string;
+  /** One answer per event; a missing event keeps whatever was stored before. */
+  events: Partial<Record<RsvpEventKey, { attending: "yes" | "no"; attendees: string[] }>>;
+};
+
+export function submitRsvp(code: string, input: RsvpSubmission): Party | null {
   const data = read();
   const lc = code.toLowerCase();
   const party = data.parties.find((p) => p.code.toLowerCase() === lc);
   if (!party) return null;
 
   const now = new Date().toISOString();
-  party.attending = input.attending;
+
+  // The roster is authoritative for every event, so clean it first: guest 1 is
+  // always the invitee (their name comes from the invite, never from what was
+  // submitted), followed by up to plusOnes named guests.
+  const roster: Guest[] = [
+    {
+      name: party.name,
+      dietary: sanitizeText(input.guests[0]?.dietary || "", 150),
+    },
+    ...input.guests
+      .slice(1, party.plusOnes + 1)
+      .map((g) => ({
+        name: sanitizeText(g.name || "", 100),
+        dietary: sanitizeText(g.dietary || "", 150),
+      }))
+      .filter((g) => g.name.length > 0),
+  ];
+  party.guests = roster;
   party.song = sanitizeText(input.song || "", 120);
-  party.guests =
-    input.attending === "yes"
-      ? [
-          // Guest 1 is always the invitee — the name is the invite name, never
-          // whatever was submitted; we only take their dietary note.
-          {
-            name: party.name,
-            dietary: sanitizeText(input.guests[0]?.dietary || "", 150),
-          },
-          // Then up to plusOnes additional named guests.
-          ...input.guests
-            .slice(1, party.plusOnes + 1)
-            .map((g) => ({
-              name: sanitizeText(g.name || "", 100),
-              dietary: sanitizeText(g.dietary || "", 150),
-            }))
-            .filter((g) => g.name.length > 0),
-        ]
-      : [];
+
+  const rosterNames = new Set(roster.map((g) => g.name));
+  for (const key of RSVP_EVENT_KEYS) {
+    const answer = input.events[key];
+    if (!answer) continue;
+    party.events[key] = {
+      attending: answer.attending,
+      // Only names that are actually on the roster can attend, so a stale or
+      // hand-crafted payload can't invent extra people.
+      attendees:
+        answer.attending === "yes"
+          ? [...new Set(answer.attendees.map((n) => sanitizeText(n, 100)))].filter(
+              (n) => rosterNames.has(n)
+            )
+          : [],
+    };
+  }
+
   if (!party.respondedAt) party.respondedAt = now;
   party.updatedAt = now;
 
