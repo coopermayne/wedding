@@ -173,7 +173,11 @@ export default function WhereToStay() {
         </Link>
         {" | "}
         <Link href="/" className="text-sm">
-          Home &gt;&gt;
+          Home
+        </Link>
+        {" | "}
+        <Link href="/rsvp" className="text-sm">
+          RSVP!! &gt;&gt;
         </Link>
       </div>
     </div>

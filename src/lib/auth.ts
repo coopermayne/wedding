@@ -8,6 +8,15 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const COOKIE_NAME = "site_auth";
 const TOKEN_MESSAGE = "emily-max-site-auth-v1";
 
+/** How the auth cookie is written, wherever it's set (gate form or invite link). */
+export const AUTH_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30, // 30 days
+} as const;
+
 function tokenFor(password: string): string {
   return createHmac("sha256", password).update(TOKEN_MESSAGE).digest("hex");
 }

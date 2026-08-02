@@ -1,26 +1,58 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { COOKIE_NAME, isValidAuthToken } from "@/lib/auth";
+import {
+  AUTH_COOKIE_OPTIONS,
+  COOKIE_NAME,
+  isValidAuthToken,
+  makeAuthToken,
+} from "@/lib/auth";
+import { getPartyByCode } from "@/lib/db";
 
-// Site-wide password gate + invite-code convenience.
+const INVITE_COOKIE = "invite";
+const INVITE_COOKIE_OPTIONS = {
+  maxAge: 60 * 60 * 24 * 365, // a year
+  sameSite: "lax",
+  path: "/",
+} as const;
+
+// Site-wide gate + invite-code convenience.
 //
-// 1. Gate: every matched route requires a valid auth cookie. Visitors without
-//    one are redirected to /gate before the requested route is ever rendered,
-//    so the page's HTML and RSC payload are never sent — you can't read the
-//    content from "view source". The cookie is an HMAC token (see lib/auth),
-//    so it can't be forged without knowing SITE_PASSWORD.
+// There are two ways in:
 //
-// 2. Invite: once authenticated, capture a guest's personalized code (from
-//    /?i=<code> or /rsvp/<code>) into a cookie so the rest of the site still
-//    knows who they are as they navigate. The email link stays the source of
-//    truth; this is just a convenience layer.
+// 1. A personalized invite link (/?i=<code> or /rsvp/<code>). The code is
+//    looked up in the guest list; if it matches a real invite, that IS the
+//    credential — no password needed. Guests who click the link in their email
+//    never see the gate.
+// 2. The shared password on /gate, for anyone arriving without a code.
+//
+// Either way we hand out the same HMAC auth cookie (see lib/auth), so it can't
+// be forged without knowing SITE_PASSWORD, and the rest of the site behaves
+// identically. Requests with neither are redirected before the route ever
+// renders, so the page's HTML and RSC payload are never sent — you can't read
+// the content from "view source".
+//
+// The invite cookie is separate and grants nothing on its own: it only
+// remembers *which* guest this is, so the RSVP link stays personalized as they
+// navigate away from the coded URL.
 export function proxy(request: NextRequest) {
   const { pathname, search } = request.nextUrl;
   const isGate = pathname === "/gate";
-  const authed = isValidAuthToken(request.cookies.get(COOKIE_NAME)?.value);
 
-  // Unauthenticated: bounce everything except the gate itself to the gate,
-  // remembering where they were headed so we can return them after they unlock.
+  // The code carried by this request, if any.
+  const fromQuery = request.nextUrl.searchParams.get("i");
+  const fromPath = pathname.match(/^\/rsvp\/([^/]+)$/)?.[1];
+  const rawCode = fromQuery || (fromPath ? decodeURIComponent(fromPath) : null);
+
+  // Only honor a code that matches a real invite — otherwise any made-up code
+  // would be a way past the gate.
+  const invitedCode = rawCode && getPartyByCode(rawCode) ? rawCode : null;
+
+  const authed =
+    isValidAuthToken(request.cookies.get(COOKIE_NAME)?.value) ||
+    Boolean(invitedCode);
+
+  // Neither cookie nor valid code: bounce to the gate, remembering where they
+  // were headed so we can return them after they unlock.
   if (!authed && !isGate) {
     const url = request.nextUrl.clone();
     url.pathname = "/gate";
@@ -37,18 +69,14 @@ export function proxy(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  // ---- invite-code capture (authenticated traffic only) ----
   const res = NextResponse.next();
-  const fromQuery = request.nextUrl.searchParams.get("i");
-  const fromPath = pathname.match(/^\/rsvp\/([^/]+)$/)?.[1];
-  const code = fromQuery || (fromPath ? decodeURIComponent(fromPath) : null);
 
-  if (code) {
-    res.cookies.set("invite", code, {
-      maxAge: 60 * 60 * 24 * 365, // a year
-      sameSite: "lax",
-      path: "/",
-    });
+  if (invitedCode) {
+    // Landing on a recognized invite link unlocks the site for this browser,
+    // so the guest stays in after they navigate away from the coded URL.
+    const token = makeAuthToken();
+    if (token) res.cookies.set(COOKIE_NAME, token, AUTH_COOKIE_OPTIONS);
+    res.cookies.set(INVITE_COOKIE, invitedCode, INVITE_COOKIE_OPTIONS);
   }
 
   return res;
