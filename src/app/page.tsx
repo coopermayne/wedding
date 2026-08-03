@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getPartyByCode } from "@/lib/db";
+import { startOver } from "./rsvp/actions";
 
 // The "visitor counter" is pure decoration, but it shouldn't be `Math.random()`
 // in render: that's an impure call React may re-run, and it made the number
@@ -106,10 +107,29 @@ export default async function Home({
             &#9829; RSVP HERE &#9829;
           </Link>
           {party && (
-            <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
-              {party.respondedAt !== null ? "✓ RSVP received — " : ""}
-              for {party.name}
-            </p>
+            <>
+              <p className="comic text-xs mt-2" style={{ color: "#666666" }}>
+                {party.respondedAt !== null ? "✓ RSVP received — " : ""}
+                for {party.name}
+              </p>
+              <form action={startOver}>
+                <button
+                  type="submit"
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#666666",
+                    textDecoration: "underline",
+                    cursor: "pointer",
+                    font: "inherit",
+                    fontSize: "0.7rem",
+                    padding: 0,
+                  }}
+                >
+                  Not {party.name}? Start over
+                </button>
+              </form>
+            </>
           )}
         </div>
       </div>

@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { stripDisallowedChars } from "@/lib/sanitize";
 import { RSVP_EVENTS, WEEKEND, type RsvpEventKey } from "@/lib/events";
+import { startOver } from "../actions";
 
 type GuestRow = { name: string; dietary: string };
 type StoredEvent = { attending: "yes" | "no" | null; attendees: string[] };
@@ -31,6 +32,32 @@ function greetingName(name: string): string {
   const trimmed = name.trim();
   if (/^the\b/i.test(trimmed)) return trimmed;
   return trimmed.split(/\s+/)[0] || trimmed;
+}
+
+/**
+ * Escape hatch for whoever isn't the person this browser is remembered as —
+ * a forwarded invite link, or a computer two guests share.
+ */
+function NotYou({ name }: { name: string }) {
+  return (
+    <form action={startOver} className="text-center mt-2">
+      <button
+        type="submit"
+        style={{
+          background: "none",
+          border: "none",
+          color: "#666666",
+          textDecoration: "underline",
+          cursor: "pointer",
+          font: "inherit",
+          fontSize: "0.75rem",
+          padding: 0,
+        }}
+      >
+        Not {name}? Start over
+      </button>
+    </form>
+  );
 }
 
 type Answers = Record<RsvpEventKey, "yes" | "no" | "">;
@@ -291,6 +318,7 @@ export default function RSVPPage() {
               ? `Thanks, ${greetingName(party.name)}! Here's what we have for you:`
               : `Thanks for letting us know, ${greetingName(party.name)}.`}
           </p>
+          <NotYou name={greetingName(party.name)} />
         </div>
 
         <hr className="rainbow-hr my-4" />
@@ -412,6 +440,7 @@ export default function RSVPPage() {
             Updating your previous RSVP.
           </p>
         )}
+        <NotYou name={greetingName(party.name)} />
 
         <hr className="rainbow-hr my-4" />
 
@@ -509,7 +538,7 @@ export default function RSVPPage() {
               <span className="courier">{event.address}</span>
             </p>
 
-            <p className="font-bold text-sm mb-2">Can you make it?</p>
+            <p className="font-bold text-sm mb-2">Attending?</p>
             <label className="mr-4 text-sm cursor-pointer">
               <input
                 type="radio"
