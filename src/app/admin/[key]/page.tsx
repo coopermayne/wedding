@@ -196,6 +196,41 @@ export default async function AdminPage({
           </div>
         </div>
 
+        {/* Vendor exports */}
+        <div className="admin-card p-4 mb-4">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <div>
+              <h2 className="font-semibold">
+                Export for restaurant / caterer / afterparty
+              </h2>
+              <p className="text-sm" style={{ color: "#6b7280" }}>
+                One row per <b>person</b> rather than per invite &mdash; plus-ones
+                get their own line, with who&apos;s bringing them and their
+                dietary needs.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {RSVP_EVENTS.map((e) => (
+                <a
+                  key={e.key}
+                  className="btn btn-secondary"
+                  href={`/admin/${key}/export?attendees=${e.key}`}
+                  download
+                >
+                  {e.label} list ({stats.events[e.key].headcount})
+                </a>
+              ))}
+              <a
+                className="btn btn-secondary"
+                href={`/admin/${key}/export?songs=1`}
+                download
+              >
+                Song requests
+              </a>
+            </div>
+          </div>
+        </div>
+
         {/* Backup */}
         <div className="admin-card p-4 mb-6">
           <div className="flex items-center justify-between flex-wrap gap-3">
