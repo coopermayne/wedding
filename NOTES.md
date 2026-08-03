@@ -42,7 +42,8 @@ slugified). Personalized link: `https://your-domain.com/rsvp/<code>`.
   code and **personalized link**, plus all response data.
 - Use that CSV with your email tool's mailmerge (Gmail + a mailmerge add-on,
   etc.) to send everyone their unique link.
-- (The old `scripts/send-invites.gs` Apps Script is superseded by this.)
+- `SITE_URL` must be set before exporting, or every link in the CSV comes out
+  as a relative path and lands nowhere from an email.
 
 ## Coolify Deployment
 
@@ -86,9 +87,10 @@ Flip it once the whole guest list is in. Note the Where-to-stay footer link to
 
 ## TODO
 
-- [ ] Set up domain in Coolify
-- [ ] Set `ADMIN_SECRET`, `SITE_URL` and `SITE_PASSWORD` in Coolify
-- [ ] Add guests via the admin page
+- [x] Set up domain in Coolify
+- [x] Set `ADMIN_SECRET`, `SITE_URL` and `SITE_PASSWORD` in Coolify
+- [ ] Add guests via the admin page (name, email, plus-ones)
 - [ ] Set `RSVP_OPEN=true` once the guest list is complete
+- [ ] Re-add the Where-to-stay footer RSVP link when opening up (optional)
 - [ ] Export CSV and run the email mailmerge with personalized links
 - [ ] Confirm the `/app/data` volume is backed up
