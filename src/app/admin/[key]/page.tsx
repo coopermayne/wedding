@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getStats, listParties, matchesFilter, type Party } from "@/lib/db";
 import { RSVP_EVENTS } from "@/lib/events";
 import { createPartyAction } from "./actions";
+import { ListControls } from "./list-controls";
 import { RowActions } from "./row-actions";
 
 export const metadata: Metadata = {
@@ -30,15 +31,15 @@ type Attending = "yes" | "no" | null;
 // just added is the one you want to see (and to copy a link from).
 const SORTS = {
   added: {
-    label: "Newest",
+    label: "Newest first",
     compare: (a: Party, b: Party) => b.createdAt.localeCompare(a.createdAt),
   },
   name: {
-    label: "Name",
+    label: "Name (A–Z)",
     compare: (a: Party, b: Party) => a.name.localeCompare(b.name),
   },
   responded: {
-    label: "Responded",
+    label: "Recently responded",
     // Most recent response first; anyone who hasn't answered sinks to the end.
     compare: (a: Party, b: Party) =>
       (b.respondedAt || "").localeCompare(a.respondedAt || ""),
@@ -115,33 +116,36 @@ export default async function AdminPage({
     })),
   ];
 
-  // Filter and sort are independent, so each link keeps whatever the other is.
-  const hrefWith = (next: { filter?: string; sort?: SortKey }) => {
-    const q = new URLSearchParams();
-    const f = next.filter ?? filter;
-    const s = next.sort ?? sort;
-    if (f !== "all") q.set("filter", f);
-    if (s !== DEFAULT_SORT) q.set("sort", s);
-    const qs = q.toString();
-    return qs ? `/admin/${key}?${qs}` : `/admin/${key}`;
-  };
-
-  const filters: { f: string; label: string; count: number }[] = [
-    { f: "all", label: "All", count: stats.totalParties },
-    { f: "pending", label: "Not responded", count: stats.pending },
-    ...RSVP_EVENTS.flatMap((e) => [
-      {
-        f: `${e.key}-yes`,
-        label: `${e.label}: yes`,
-        count: stats.events[e.key].accepted,
-      },
-      {
-        f: `${e.key}-no`,
-        label: `${e.label}: no`,
-        count: stats.events[e.key].declined,
-      },
-    ]),
+  // Grouped so the event-specific filters read as "Wedding → Attending"
+  // rather than repeating the event name in every option.
+  const filterGroups = [
+    {
+      label: null,
+      options: [
+        { value: "all", label: `Everyone (${stats.totalParties})` },
+        { value: "pending", label: `Not responded (${stats.pending})` },
+        { value: "responded", label: `Responded (${stats.responded})` },
+      ],
+    },
+    ...RSVP_EVENTS.map((e) => ({
+      label: e.label,
+      options: [
+        {
+          value: `${e.key}-yes`,
+          label: `Attending (${stats.events[e.key].accepted})`,
+        },
+        {
+          value: `${e.key}-no`,
+          label: `Declined (${stats.events[e.key].declined})`,
+        },
+      ],
+    })),
   ];
+
+  const sortOptions = (Object.keys(SORTS) as SortKey[]).map((s) => ({
+    value: s,
+    label: SORTS[s].label,
+  }));
 
   return (
     <div className="admin-ui">
@@ -327,34 +331,21 @@ export default async function AdminPage({
 
         {/* Guest list */}
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
-          <h2 className="text-lg font-semibold">Guest list</h2>
-          <div className="flex flex-wrap gap-2">
-            {filters.map((opt) => (
-              <a
-                key={opt.f}
-                href={hrefWith({ filter: opt.f })}
-                className={`chip ${filter === opt.f ? "chip-active" : ""}`}
-              >
-                {opt.label} ({opt.count})
-              </a>
-            ))}
-          </div>
-        </div>
-
-        <div
-          className="flex items-center gap-2 flex-wrap mb-3 text-sm"
-          style={{ color: "#6b7280" }}
-        >
-          <span>Sort by:</span>
-          {(Object.keys(SORTS) as SortKey[]).map((s) => (
-            <a
-              key={s}
-              href={hrefWith({ sort: s })}
-              className={`chip ${sort === s ? "chip-active" : ""}`}
-            >
-              {SORTS[s].label}
-            </a>
-          ))}
+          <h2 className="text-lg font-semibold">
+            Guest list{" "}
+            <span className="font-normal" style={{ color: "#6b7280" }}>
+              ({visible.length}
+              {visible.length !== parties.length && ` of ${parties.length}`})
+            </span>
+          </h2>
+          <ListControls
+            adminKey={key}
+            filter={filter}
+            sort={sort}
+            defaultSort={DEFAULT_SORT}
+            filterGroups={filterGroups}
+            sortOptions={sortOptions}
+          />
         </div>
 
         {parties.length === 0 ? (
