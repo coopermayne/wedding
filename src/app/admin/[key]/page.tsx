@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { getStats, listParties, matchesFilter } from "@/lib/db";
+import { getStats, listParties, matchesFilter, type Party } from "@/lib/db";
 import { RSVP_EVENTS } from "@/lib/events";
 import { createPartyAction } from "./actions";
 import { RowActions } from "./row-actions";
@@ -26,6 +26,28 @@ function fmtDate(iso: string | null): string {
 
 type Attending = "yes" | "no" | null;
 
+// Newest invite first by default: while the list is being typed in, the row you
+// just added is the one you want to see (and to copy a link from).
+const SORTS = {
+  added: {
+    label: "Newest",
+    compare: (a: Party, b: Party) => b.createdAt.localeCompare(a.createdAt),
+  },
+  name: {
+    label: "Name",
+    compare: (a: Party, b: Party) => a.name.localeCompare(b.name),
+  },
+  responded: {
+    label: "Responded",
+    // Most recent response first; anyone who hasn't answered sinks to the end.
+    compare: (a: Party, b: Party) =>
+      (b.respondedAt || "").localeCompare(a.respondedAt || ""),
+  },
+} as const;
+
+type SortKey = keyof typeof SORTS;
+const DEFAULT_SORT: SortKey = "added";
+
 function StatusBadge({ attending }: { attending: Attending }) {
   if (attending === "yes")
     return <span className="badge badge-yes">Attending</span>;
@@ -38,14 +60,16 @@ export default async function AdminPage({
   searchParams,
 }: {
   params: Promise<{ key: string }>;
-  searchParams: Promise<{ filter?: string }>;
+  searchParams: Promise<{ filter?: string; sort?: string }>;
 }) {
   const { key } = await params;
   if (!process.env.ADMIN_SECRET || key !== process.env.ADMIN_SECRET) {
     notFound();
   }
 
-  const { filter: filterParam } = await searchParams;
+  const { filter: filterParam, sort: sortParam } = await searchParams;
+  const sort: SortKey =
+    sortParam && sortParam in SORTS ? (sortParam as SortKey) : DEFAULT_SORT;
   const validFilters = [
     "pending",
     "responded",
@@ -63,11 +87,7 @@ export default async function AdminPage({
 
   const visible = [...parties]
     .filter((p) => matchesFilter(p, filter))
-    .sort((a, b) => a.name.localeCompare(b.name));
-  const recent = [...parties]
-    .filter((p) => p.respondedAt)
-    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))
-    .slice(0, 6);
+    .sort(SORTS[sort].compare);
 
   const pct = Math.round(stats.responseRate * 100);
 
@@ -94,6 +114,17 @@ export default async function AdminPage({
       color: i === 0 ? "#0f766e" : "#7c3aed",
     })),
   ];
+
+  // Filter and sort are independent, so each link keeps whatever the other is.
+  const hrefWith = (next: { filter?: string; sort?: SortKey }) => {
+    const q = new URLSearchParams();
+    const f = next.filter ?? filter;
+    const s = next.sort ?? sort;
+    if (f !== "all") q.set("filter", f);
+    if (s !== DEFAULT_SORT) q.set("sort", s);
+    const qs = q.toString();
+    return qs ? `/admin/${key}?${qs}` : `/admin/${key}`;
+  };
 
   const filters: { f: string; label: string; count: number }[] = [
     { f: "all", label: "All", count: stats.totalParties },
@@ -160,92 +191,109 @@ export default async function AdminPage({
           ))}
         </div>
 
-        {/* Export */}
-        <div className="admin-card p-4 mb-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="font-semibold">Export for mailmerge</h2>
-              <p className="text-sm" style={{ color: "#6b7280" }}>
-                Each CSV includes every invite&apos;s personalized link. Use{" "}
-                <b>Not responded</b> for reminders, <b>Attending</b> for
-                confirmations.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <a className="btn btn-secondary" href={`/admin/${key}/export`} download>
-                Everyone
-              </a>
-              <a
-                className="btn btn-secondary"
-                href={`/admin/${key}/export?status=pending`}
-                download
-              >
-                Not responded ({stats.pending})
-              </a>
-              {RSVP_EVENTS.map((e) => (
+        {/* Exports & backup — collapsed by default; you need them rarely, but
+            the guest list underneath is what you actually look at. */}
+        <details className="admin-card mb-6">
+          <summary
+            className="p-4 font-semibold"
+            style={{ cursor: "pointer", listStyle: "revert" }}
+          >
+            Exports &amp; backup
+            <span
+              className="font-normal"
+              style={{ color: "#6b7280", fontSize: "0.875rem" }}
+            >
+              {" "}
+              &mdash; mailmerge, vendor lists, JSON snapshot
+            </span>
+          </summary>
+
+          <div className="p-4 pt-0">
+            <div className="flex items-center justify-between flex-wrap gap-3 pb-4">
+              <div>
+                <h3 className="font-semibold">Export for mailmerge</h3>
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  Each CSV includes every invite&apos;s personalized link. Use{" "}
+                  <b>Not responded</b> for reminders, <b>Attending</b> for
+                  confirmations.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <a className="btn btn-secondary" href={`/admin/${key}/export`} download>
+                  Everyone
+                </a>
                 <a
-                  key={e.key}
                   className="btn btn-secondary"
-                  href={`/admin/${key}/export?status=${e.key}-yes`}
+                  href={`/admin/${key}/export?status=pending`}
                   download
                 >
-                  {e.label}: yes ({stats.events[e.key].accepted})
+                  Not responded ({stats.pending})
                 </a>
-              ))}
+                {RSVP_EVENTS.map((e) => (
+                  <a
+                    key={e.key}
+                    className="btn btn-secondary"
+                    href={`/admin/${key}/export?status=${e.key}-yes`}
+                    download
+                  >
+                    {e.label}: yes ({stats.events[e.key].accepted})
+                  </a>
+                ))}
+              </div>
             </div>
-          </div>
-        </div>
 
-        {/* Vendor exports */}
-        <div className="admin-card p-4 mb-4">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="font-semibold">
-                Export for restaurant / caterer / afterparty
-              </h2>
-              <p className="text-sm" style={{ color: "#6b7280" }}>
-                One row per <b>person</b> rather than per invite &mdash; plus-ones
-                get their own line, with who&apos;s bringing them and their
-                dietary needs.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {RSVP_EVENTS.map((e) => (
+            <div
+              className="flex items-center justify-between flex-wrap gap-3 py-4"
+              style={{ borderTop: "1px solid #f1f5f9" }}
+            >
+              <div>
+                <h3 className="font-semibold">
+                  Export for restaurant / caterer / afterparty
+                </h3>
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  One row per <b>person</b> rather than per invite &mdash;
+                  plus-ones get their own line, with who&apos;s bringing them and
+                  their dietary needs.
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {RSVP_EVENTS.map((e) => (
+                  <a
+                    key={e.key}
+                    className="btn btn-secondary"
+                    href={`/admin/${key}/export?attendees=${e.key}`}
+                    download
+                  >
+                    {e.label} list ({stats.events[e.key].headcount})
+                  </a>
+                ))}
                 <a
-                  key={e.key}
                   className="btn btn-secondary"
-                  href={`/admin/${key}/export?attendees=${e.key}`}
+                  href={`/admin/${key}/export?songs=1`}
                   download
                 >
-                  {e.label} list ({stats.events[e.key].headcount})
+                  Song requests
                 </a>
-              ))}
-              <a
-                className="btn btn-secondary"
-                href={`/admin/${key}/export?songs=1`}
-                download
-              >
-                Song requests
+              </div>
+            </div>
+
+            <div
+              className="flex items-center justify-between flex-wrap gap-3 pt-4"
+              style={{ borderTop: "1px solid #f1f5f9" }}
+            >
+              <div>
+                <h3 className="font-semibold">Backup</h3>
+                <p className="text-sm" style={{ color: "#6b7280" }}>
+                  A full snapshot of every invite and response. Download one now
+                  and then and keep it somewhere safe.
+                </p>
+              </div>
+              <a className="btn btn-secondary" href={`/admin/${key}/backup`} download>
+                Download backup (JSON)
               </a>
             </div>
           </div>
-        </div>
-
-        {/* Backup */}
-        <div className="admin-card p-4 mb-6">
-          <div className="flex items-center justify-between flex-wrap gap-3">
-            <div>
-              <h2 className="font-semibold">Backup</h2>
-              <p className="text-sm" style={{ color: "#6b7280" }}>
-                A full snapshot of every invite and response. Download one now and
-                then and keep it somewhere safe.
-              </p>
-            </div>
-            <a className="btn btn-secondary" href={`/admin/${key}/backup`} download>
-              Download backup (JSON)
-            </a>
-          </div>
-        </div>
+        </details>
 
         {/* Add invite */}
         <div className="admin-card p-4 mb-6">
@@ -277,40 +325,6 @@ export default async function AdminPage({
           </form>
         </div>
 
-        {/* Recent activity */}
-        {recent.length > 0 && (
-          <div className="admin-card p-4 mb-6">
-            <h2 className="font-semibold mb-2">Latest responses</h2>
-            <ul className="text-sm" style={{ color: "#374151" }}>
-              {recent.map((p) => (
-                <li
-                  key={p.id}
-                  className="flex items-center gap-2 py-1"
-                  style={{ borderBottom: "1px solid #f1f5f9" }}
-                >
-                  <span className="font-medium">{p.name}</span>
-                  {RSVP_EVENTS.map((e) => {
-                    const answer = p.events[e.key];
-                    return (
-                      <span key={e.key} style={{ color: "#6b7280", fontSize: "0.8rem" }}>
-                        {e.label}:{" "}
-                        {answer.attending === "yes"
-                          ? `${answer.attendees.length}`
-                          : answer.attending === "no"
-                            ? "no"
-                            : "—"}
-                      </span>
-                    );
-                  })}
-                  <span className="ml-auto" style={{ color: "#9ca3af" }}>
-                    {fmtDate(p.updatedAt)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
         {/* Guest list */}
         <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
           <h2 className="text-lg font-semibold">Guest list</h2>
@@ -318,13 +332,29 @@ export default async function AdminPage({
             {filters.map((opt) => (
               <a
                 key={opt.f}
-                href={opt.f === "all" ? `/admin/${key}` : `/admin/${key}?filter=${opt.f}`}
+                href={hrefWith({ filter: opt.f })}
                 className={`chip ${filter === opt.f ? "chip-active" : ""}`}
               >
                 {opt.label} ({opt.count})
               </a>
             ))}
           </div>
+        </div>
+
+        <div
+          className="flex items-center gap-2 flex-wrap mb-3 text-sm"
+          style={{ color: "#6b7280" }}
+        >
+          <span>Sort by:</span>
+          {(Object.keys(SORTS) as SortKey[]).map((s) => (
+            <a
+              key={s}
+              href={hrefWith({ sort: s })}
+              className={`chip ${sort === s ? "chip-active" : ""}`}
+            >
+              {SORTS[s].label}
+            </a>
+          ))}
         </div>
 
         {parties.length === 0 ? (
@@ -347,6 +377,7 @@ export default async function AdminPage({
                     ))}
                     <th>Dietary &amp; song</th>
                     <th>Responded</th>
+                    <th>Added</th>
                     <th style={{ textAlign: "right" }}>Actions</th>
                   </tr>
                 </thead>
@@ -405,6 +436,9 @@ export default async function AdminPage({
                       </td>
                       <td style={{ color: "#6b7280", fontSize: "0.8rem" }}>
                         {fmtDate(p.respondedAt)}
+                      </td>
+                      <td style={{ color: "#6b7280", fontSize: "0.8rem" }}>
+                        {fmtDate(p.createdAt)}
                       </td>
                       <td>
                         <RowActions
