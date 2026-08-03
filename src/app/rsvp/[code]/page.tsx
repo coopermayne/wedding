@@ -23,6 +23,16 @@ type Party = {
 // Labels for the additional guests beyond the invitee.
 const PLUS_LABELS = ["Plus One", "Plus Two", "Plus Three", "Plus Four", "Plus Five"];
 
+/**
+ * Greetings read better on a first name ("Thanks, Jake!"). Household invites
+ * are the exception — "The Thompsons" would become "The" — so those stay whole.
+ */
+function greetingName(name: string): string {
+  const trimmed = name.trim();
+  if (/^the\b/i.test(trimmed)) return trimmed;
+  return trimmed.split(/\s+/)[0] || trimmed;
+}
+
 type Answers = Record<RsvpEventKey, "yes" | "no" | "">;
 /** Who's coming to each event, as flags lined up with the roster rows. */
 type Attendance = Record<RsvpEventKey, boolean[]>;
@@ -278,8 +288,8 @@ export default function RSVPPage() {
           </h1>
           <p className="comic text-base mt-2" style={{ color: "#666666" }}>
             {comingToAnything
-              ? `Thanks, ${party.name}! Here's what we have for you:`
-              : `Thanks for letting us know, ${party.name}.`}
+              ? `Thanks, ${greetingName(party.name)}! Here's what we have for you:`
+              : `Thanks for letting us know, ${greetingName(party.name)}.`}
           </p>
         </div>
 
@@ -395,7 +405,7 @@ export default function RSVPPage() {
           className="text-xl md:text-2xl font-bold text-center"
           style={{ color: "#cc00cc" }}
         >
-          Hello, {party.name}!
+          Hello, {greetingName(party.name)}!
         </h2>
         {party.responded && (
           <p className="comic text-xs text-center mt-1" style={{ color: "#009900" }}>

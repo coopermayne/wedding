@@ -203,6 +203,21 @@ export function getPartyByCode(code: string): Party | null {
   return read().parties.find((p) => p.code.toLowerCase() === lc) || null;
 }
 
+/**
+ * Look up an invite by the email we sent it to — the "I lost my link" path.
+ * If the same address was used for two invites we can't tell them apart, so
+ * the caller gets nothing rather than a coin flip.
+ */
+export function getPartyByEmail(email: string): Party | "ambiguous" | null {
+  const lc = email.trim().toLowerCase();
+  if (!lc) return null;
+  const matches = read().parties.filter(
+    (p) => p.email.trim().toLowerCase() === lc
+  );
+  if (matches.length === 0) return null;
+  return matches.length > 1 ? "ambiguous" : matches[0];
+}
+
 /** Has this party submitted the form at all? Drives reminder emails. */
 export function hasResponded(party: Party): boolean {
   return party.respondedAt !== null;
