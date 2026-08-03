@@ -3,6 +3,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPartyByEmail } from "@/lib/db";
+import { isRsvpOpenToEveryone } from "@/lib/config";
 
 /**
  * "I lost my link" recovery: find the invite we sent to this address and drop
@@ -10,6 +11,10 @@ import { getPartyByEmail } from "@/lib/db";
  * password, so this is a convenience for invited guests, not a public lookup.
  */
 export async function findInviteByEmail(formData: FormData) {
+  // Server Actions are reachable by direct POST, not just through our form, so
+  // the rollout switch is re-checked here rather than only hiding the UI.
+  if (!isRsvpOpenToEveryone()) redirect("/rsvp");
+
   const email = String(formData.get("email") ?? "");
   const found = getPartyByEmail(email);
 

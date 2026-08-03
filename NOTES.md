@@ -53,12 +53,42 @@ slugified). Personalized link: `https://your-domain.com/rsvp/<code>`.
 - Env vars needed in Coolify:
   - `ADMIN_SECRET` — long random string; the secret admin URL segment.
   - `SITE_URL` — e.g. `https://your-domain.com` (used to build CSV links).
+  - `SITE_PASSWORD` — the shared password on `/gate`. Changing it signs
+    everyone out (the auth cookie is derived from it).
+  - `RSVP_OPEN` — see below. Leave unset until the guest list is loaded.
 - The old `GOOGLE_*` env vars are no longer used.
+
+## Getting in (two ways)
+
+1. **Personalized invite link** — `/?i=<code>` or `/rsvp/<code>`. The code is
+   checked against the guest list, and a real one is itself the credential: no
+   password prompt. This is what guests get in their email.
+2. **Shared password** — `/gate`, for anyone without a link.
+
+Either way the visitor gets the same auth cookie (30 days). A separate
+`invite` cookie remembers *which* guest they are; it grants nothing on its own,
+and "Not <name>? Start over" clears it.
+
+## RSVP rollout switch
+
+`RSVP_OPEN` (in `src/lib/config.ts`) controls the **public** ways to reach the
+RSVP form:
+
+- **Unset / not `true`** (current): only guests arriving on their own invite
+  link see an RSVP button. A bare visit to `/rsvp` says "invitations are on
+  their way." This is the safe state while invites are still being entered — a
+  guest who isn't in the list yet can't hit a confusing dead end.
+- **`RSVP_OPEN=true`**: the RSVP button shows for everyone, and `/rsvp` offers
+  email sign-in (type the address the invite went to, land on your own form).
+
+Flip it once the whole guest list is in. Note the Where-to-stay footer link to
+`/rsvp` was removed for now; re-add it when opening up if you want it back.
 
 ## TODO
 
 - [ ] Set up domain in Coolify
-- [ ] Set `ADMIN_SECRET` and `SITE_URL` in Coolify
+- [ ] Set `ADMIN_SECRET`, `SITE_URL` and `SITE_PASSWORD` in Coolify
 - [ ] Add guests via the admin page
+- [ ] Set `RSVP_OPEN=true` once the guest list is complete
 - [ ] Export CSV and run the email mailmerge with personalized links
 - [ ] Confirm the `/app/data` volume is backed up

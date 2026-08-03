@@ -2,6 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { getPartyByCode } from "@/lib/db";
+import { isRsvpOpenToEveryone } from "@/lib/config";
 import { startOver } from "./rsvp/actions";
 
 // The "visitor counter" is pure decoration, but it shouldn't be `Math.random()`
@@ -29,6 +30,9 @@ export default async function Home({
   const code = i || (await cookies()).get("invite")?.value;
   const party = code ? getPartyByCode(code) : null;
   const rsvpHref = party ? `/rsvp/${encodeURIComponent(party.code)}` : "/rsvp";
+  // Until the guest list is fully loaded, only people who arrived on their own
+  // invite link get an RSVP button — see lib/config.
+  const showRsvp = Boolean(party) || isRsvpOpenToEveryone();
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-6">
@@ -100,12 +104,14 @@ export default async function Home({
           </Link>
         </div>
         <div>
-          <Link
-            href={rsvpHref}
-            className="highlight-magenta text-base no-underline blink link-glow"
-          >
-            &#9829; RSVP HERE &#9829;
-          </Link>
+          {showRsvp && (
+            <Link
+              href={rsvpHref}
+              className="highlight-magenta text-base no-underline blink link-glow"
+            >
+              &#9829; RSVP HERE &#9829;
+            </Link>
+          )}
           {party && (
             <>
               <p className="comic text-xs mt-2" style={{ color: "#666666" }}>

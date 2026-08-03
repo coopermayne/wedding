@@ -2,6 +2,7 @@ import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPartyByCode } from "@/lib/db";
+import { isRsvpOpenToEveryone } from "@/lib/config";
 import { findInviteByEmail } from "./actions";
 
 export default async function RSVPLanding({
@@ -17,6 +18,31 @@ export default async function RSVPLanding({
   }
 
   const { notfound, ambiguous } = await searchParams;
+
+  // Guest list still going in: don't offer email sign-in to someone who very
+  // likely isn't in it yet — "we couldn't find you" is worse than "check your
+  // email". Anyone with their link is already past this page.
+  if (!isRsvpOpenToEveryone()) {
+    return (
+      <div className="max-w-lg mx-auto px-4 py-6 text-center my-16">
+        <h1
+          className="text-3xl md:text-4xl font-bold mb-4"
+          style={{ color: "#cc00cc" }}
+        >
+          ~*~ RSVP ~*~
+        </h1>
+        <p className="comic text-base mb-6" style={{ color: "#666666" }}>
+          Invitations are on their way! Each one comes with its own personalized
+          RSVP link.
+          <br />
+          <br />
+          Keep an eye on your inbox &mdash; and if you think we missed you, just
+          email us and we&apos;ll get you sorted.
+        </p>
+        <Link href="/">&lt;&lt; Back to Home &gt;&gt;</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-lg mx-auto px-4 py-6 text-center my-16">
