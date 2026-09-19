@@ -26,7 +26,7 @@ export default function Proceedings() {
         <div className="inline-block mb-4" style={{ borderBottom: "3px double #009900" }}>
           <h2 className="text-2xl md:text-3xl font-bold px-4 pb-1" style={{ color: "#009900" }}>
             <span style={{ color: "#ffcc00", fontSize: "1.2em" }}>&#10038;</span>
-            {" "}WELCOME PUPUSAS + BEER{" "}
+            {" "}WELCOME WINE/BEER/PIZZA{" "}
             <span style={{ color: "#ffcc00", fontSize: "1.2em" }}>&#10038;</span>
           </h2>
         </div>
@@ -51,7 +51,7 @@ export default function Proceedings() {
                   Location
                 </td>
                 <td className="p-3 text-lg font-bold" style={{ border: "2px ridge #99cc99", color: "#006600" }}>
-                  Cojutepeque Restaurant
+                  Bar Bandini
                 </td>
               </tr>
               <tr>
@@ -59,9 +59,9 @@ export default function Proceedings() {
                   Address
                 </td>
                 <td className="p-3 courier" style={{ border: "2px ridge #99cc99" }}>
-                  2610 W. 3rd St.
+                  2150 W. Sunset Blvd.
                   <br />
-                  Los Angeles, CA
+                  Los Angeles, CA 90026
                 </td>
               </tr>
             </tbody>

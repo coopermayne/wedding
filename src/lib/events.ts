@@ -26,10 +26,10 @@ export const WEEKEND: WeekendEvent[] = [
   {
     key: "welcome",
     label: "Friday welcome",
-    title: "Welcome Pupusas + Beer",
+    title: "Welcome Wine/Beer/Pizza",
     when: "Friday, October 23 · 7:00 p.m.",
-    place: "Cojutepeque Restaurant",
-    address: "2610 W. 3rd St., Los Angeles",
+    place: "Bar Bandini",
+    address: "2150 W. Sunset Blvd., Los Angeles",
     rsvp: true,
     dietary: false,
   },
